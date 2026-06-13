@@ -2,6 +2,8 @@ from rest_framework import serializers
 from .models import *
 
 class AssessmentRunSerializer(serializers.ModelSerializer):
+    asset_data = serializers.JSONField(write_only=True, required=False, default=dict)
+
     class Meta:
         model = AssessmentRun
         fields = [
@@ -9,6 +11,7 @@ class AssessmentRunSerializer(serializers.ModelSerializer):
             "asset_id",
             "asset_reference",
             "asset_type",
+            "asset_data",
             "triggered_by",
             "requested_at",
             "started_at",
@@ -21,6 +24,10 @@ class AssessmentRunSerializer(serializers.ModelSerializer):
             "started_at",
             "completed_at",
         ]
+
+    def create(self, validated_data):
+        self.asset_data = validated_data.pop("asset_data", {})
+        return super().create(validated_data)
 
 
 class AssessmentReportSerializer(serializers.ModelSerializer):
