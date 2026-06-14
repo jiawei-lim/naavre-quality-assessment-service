@@ -13,7 +13,7 @@ class WorkflowFileAsset(BaseAsset):
     configurations: list[dict[str, Any]] = field(default_factory=list)
     parameters: list[dict[str, Any]] = field(default_factory=list)
     secrets: list[dict[str, Any]] = field(default_factory=list)
-    steps: list[dict[str, Any]] = field(default_factory=list)
+    nodes: list[dict[str, Any]] = field(default_factory=list)
     links: list[dict[str, Any]] = field(default_factory=list)
     dependencies: list[dict[str, Any]] = field(default_factory=list)
     container_images: list[str] = field(default_factory=list)
@@ -24,7 +24,7 @@ class WorkflowFileAsset(BaseAsset):
             f"id={self.id!r}, "
             f"title={self.title!r}, "
             f"asset_type={self.asset_type!r}, "
-            f"steps={len(self.steps)}, "
+            f"nodes={len(self.nodes)}, "
             f"links={len(self.links)}, "
             f"inputs={len(self.inputs)}, "
             f"outputs={len(self.outputs)}, "
@@ -58,11 +58,11 @@ class WorkflowFileAsset(BaseAsset):
                 "configurations": self.configurations,
                 "parameters": self.parameters,
                 "secrets": self.secrets,
-                "steps": self.steps,
+                "nodes": self.nodes,
                 "links": self.links,
                 "dependencies": self.dependencies,
                 "container_images": self.container_images,
-                "step_count": len(self.steps),
+                "node_count": len(self.nodes),
                 "link_count": len(self.links),
             },
             "raw_payload": self.raw_payload,

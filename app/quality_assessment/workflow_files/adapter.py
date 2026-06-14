@@ -14,9 +14,9 @@ class WorkflowFileAdapter:
             raise ValueError(f"Unsupported workflow asset type: {asset_type}")
 
         workflow_data = self._workflow_data(asset)
-        steps = self._steps(workflow_data)
+        nodes = self._nodes(workflow_data)
         links = self._links(workflow_data)
-        cells = [step["cell"] for step in steps if step.get("cell")]
+        cells = [node["cell"] for node in nodes if node.get("cell")]
         derived_metadata = self._derived_metadata(cells)
 
         return WorkflowFileAsset(
@@ -37,7 +37,7 @@ class WorkflowFileAdapter:
             configurations=self._cell_items(cells, "confs"),
             parameters=self._cell_items(cells, "params"),
             secrets=self._cell_items(cells, "secrets"),
-            steps=steps,
+            nodes=nodes,
             links=links,
             dependencies=self._cell_items(cells, "dependencies"),
             container_images=self._container_images(cells),
@@ -58,13 +58,13 @@ class WorkflowFileAdapter:
 
         return {}
 
-    def _steps(self, workflow_data: dict[str, Any]) -> list[dict[str, Any]]:
-        nodes = self._as_list(workflow_data.get("nodes"))
-        steps = []
+    def _nodes(self, workflow_data: dict[str, Any]) -> list[dict[str, Any]]:
+        raw_nodes = self._as_list(workflow_data.get("nodes"))
+        nodes = []
 
-        for node in nodes:
+        for node in raw_nodes:
             cell = node.get("properties", {}).get("cell", {})
-            steps.append(
+            nodes.append(
                 {
                     "id": node.get("id"),
                     "type": node.get("type"),
@@ -77,7 +77,7 @@ class WorkflowFileAdapter:
                 }
             )
 
-        return steps
+        return nodes
 
     def _links(self, workflow_data: dict[str, Any]) -> list[dict[str, Any]]:
         links = self._as_list(workflow_data.get("links"))
