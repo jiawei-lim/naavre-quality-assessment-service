@@ -34,13 +34,9 @@ class AssessmentRunView(generics.GenericAPIView):
         )
 
         graph = workflow_file_service.build_workflow_multidigraph(workflow_file_asset)
-        print(f"Self-Loops:{workflow_file_service.get_self_loops(graph)}\n")
-        print(f"Cycles:{workflow_file_service.get_cycles(graph)}\n")
-        print(f"disconnected:{workflow_file_service.get_disconnected_components(graph)}\n")
-        print(f"isolated:{workflow_file_service.get_isolated_nodes(graph)}\n")
-        print(f"i/o mismatch:{workflow_file_service.get_input_output_type_mismatches(graph)}\n")
+        result = workflow_file_service.run_graph_checks(graph)
 
-        return Response({"detail": "WorkflowFileAsset printed to terminal."})
+        return Response(result)
 
     def _base_asset_from_validated_data(self, validated_data):
         asset_data = validated_data.get("asset_data", {})

@@ -136,6 +136,18 @@ def get_input_output_type_mismatches(
     return mismatches
 
 
+def run_graph_checks(graph: nx.MultiDiGraph) -> dict[str, Any]:
+    return {
+            "self_loops": get_self_loops(graph),
+            "cycles": get_cycles(graph),
+            "isolated_nodes": get_isolated_nodes(graph),
+            "disconnected_components": get_disconnected_components(graph),
+            "orphaned_nodes": get_orphaned_nodes(graph),
+            "input_output_type_mismatches": get_input_output_type_mismatches(graph),
+            "invalid_links": graph.graph.get("invalid_links", []),
+        }
+
+
 def _edge_from_link(link: dict[str, Any], index: int) -> dict[str, Any]:
     from_data = link.get("from", {})
     to_data = link.get("to", {})
