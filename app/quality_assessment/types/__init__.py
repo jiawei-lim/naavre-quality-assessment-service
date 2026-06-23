@@ -4,7 +4,6 @@ from quality_assessment.types.common import (
     Dependency,
     Parameter,
     Port,
-    Position,
     Secret,
 )
 from quality_assessment.types.workflow_components import WorkflowComponent
@@ -20,7 +19,6 @@ __all__ = [
     "Dependency",
     "Parameter",
     "Port",
-    "Position",
     "Secret",
     "WorkflowComponent",
     "WorkflowFile",
