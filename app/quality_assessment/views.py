@@ -2,10 +2,9 @@ from rest_framework import generics
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
-from .assets.base_asset import BaseAsset
+from .adapters import WorkflowFileAdapter
 from .models import *
 from .serializers import *
-from .workflow_files.adapter import WorkflowFileAdapter
 from .services import workflow_file_service
 
 class AssessmentReportListView(generics.ListAPIView):
@@ -22,37 +21,40 @@ class AssessmentReportDetailView(generics.RetrieveAPIView):
 class AssessmentRunView(generics.GenericAPIView):
     queryset = AssessmentRun.objects.all()
     serializer_class = AssessmentRunSerializer
+    supported_workflow_file_asset_types = {"workflow", "workflow_file"}
 
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        base_asset = self._base_asset_from_validated_data(serializer.validated_data)
-        workflow_file_asset = WorkflowFileAdapter().from_base_asset(
-            base_asset,
-            asset_type=serializer.validated_data["asset_type"],
+        asset_type = serializer.validated_data["asset_type"]
+        if asset_type not in self.supported_workflow_file_asset_types:
+            raise ValidationError(
+                {
+                    "asset_type": (
+                        f"Unsupported asset type for workflow file assessment: "
+                        f"{asset_type}"
+                    )
+                }
+            )
+
+        workflow_file = WorkflowFileAdapter().from_payload(
+            self._workflow_file_payload_from_validated_data(
+                serializer.validated_data
+            )
         )
 
-        graph = workflow_file_service.build_workflow_multidigraph(workflow_file_asset)
+        graph = workflow_file_service.build_workflow_multidigraph(workflow_file)
         result = workflow_file_service.run_graph_checks(graph)
 
         return Response(result)
 
-    def _base_asset_from_validated_data(self, validated_data):
+    def _workflow_file_payload_from_validated_data(self, validated_data):
         asset_data = validated_data.get("asset_data", {})
 
         if not isinstance(asset_data, dict):
             raise ValidationError({"asset_data": "Expected an object."})
 
-        return BaseAsset(
-            id=asset_data.get("id") or validated_data.get("asset_id", ""),
-            title=asset_data.get("title", ""),
-            description=asset_data.get("description", ""),
-            created=asset_data.get("created"),
-            modified=asset_data.get("modified"),
-            owner=asset_data.get("owner"),
-            virtual_lab=asset_data.get("virtual_lab"),
-            shared_with_scopes=asset_data.get("shared_with_scopes", []),
-            shared_with_users=asset_data.get("shared_with_users", []),
-            raw_payload=asset_data,
-        )
+        payload = dict(asset_data)
+        payload["id"] = payload.get("id") or validated_data.get("asset_id", "")
+        return payload

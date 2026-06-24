@@ -15,12 +15,14 @@ from quality_assessment.types import (
 class WorkflowComponentAdapter:
     def from_payload(self, payload: dict[str, Any]) -> WorkflowComponent:
         data = self._validated_data(payload)
+        component_ref = data.get("url")
+        component_id = component_ref or data.get("type") or ""
 
         return WorkflowComponent(
-            id=data["url"],
+            id=component_id,
             title=data.get("title"),
             description=data.get("description"),
-            component_ref=data["url"],
+            component_ref=component_ref,
             version=data.get("version"),
             owner=data.get("owner"),
             virtual_lab=data.get("virtual_lab"),
