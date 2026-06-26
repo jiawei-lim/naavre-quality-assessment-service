@@ -3,7 +3,7 @@ from typing import Any
 import networkx as nx
 
 from quality_assessment.types import WorkflowFile
-from .workflow_file_graph_checks import (
+from .workflow_file_graph_check_service import (
     get_cycles,
     get_disconnected_components,
     get_input_output_type_mismatches,
