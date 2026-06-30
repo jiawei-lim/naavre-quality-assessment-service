@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from .adapters import WorkflowFileAdapter
 from .models import *
 from .serializers import *
-from .services import workflow_file_service, workflow_encoder_service
+from .services import workflow_file_service, workflow_file_semantic_check_service
 
 
 class AssessmentReportListView(generics.ListAPIView):
@@ -47,7 +47,7 @@ class AssessmentRunView(generics.GenericAPIView):
 
         graph = workflow_file_service.build_workflow_multidigraph(workflow_file)
         result = workflow_file_service.run_graph_checks(graph)
-        temp = workflow_encoder_service.encode_workflow_graph_for_semantic_analysis(graph)
+        temp = workflow_file_semantic_check_service.get_semantic_checks(graph)
 
         print(temp)
         return Response(result)

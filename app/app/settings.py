@@ -10,10 +10,20 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+import os
 from pathlib import Path
+
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+
+def env_int(name, default):
+    return int(os.environ.get(name, default))
+
+
+load_dotenv(BASE_DIR.parent / ".env")
 
 
 # Quick-start development settings - unsuitable for production
@@ -135,3 +145,15 @@ SPECTACULAR_SETTINGS = {
     'SERVE_INCLUDE_SCHEMA': False,
     # OTHER SETTINGS
 }
+
+
+LLM_PROVIDER = os.getenv("LLM_PROVIDER", "openrouter")
+LLM_API_KEY = os.getenv("OPENROUTER_API_KEY") or os.getenv("LLM_API_KEY", "")
+OPENROUTER_HTTP_REFERER = os.getenv("OPENROUTER_HTTP_REFERER", "")
+OPENROUTER_APP_TITLE = os.getenv(
+    "OPENROUTER_APP_TITLE",
+    "NaaVRE Quality Assessment Service",
+)
+LLM_MODEL = os.getenv("LLM_MODEL", "~openai/gpt-latest")
+LLM_TIMEOUT_SECONDS = env_int("LLM_TIMEOUT_SECONDS", 60)
+LLM_MAX_TOKENS = env_int("LLM_MAX_TOKENS", 4096)

@@ -69,7 +69,6 @@ def _encode_node(node_id: str, node_data: dict[str, Any]) -> dict[str, Any]:
         "dependencies": _encode_dependencies(
             getattr(component, "dependencies", [])
         ),
-        "runtime": _encode_runtime(node_data, component),
     }
 
 
@@ -102,9 +101,7 @@ def _encode_link(
 ) -> dict[str, Any]:
     return {
         "id": edge_data.get("link_id") or edge_key,
-        "from_node_id": from_node,
         "from_port_name": edge_data.get("from_port_name"),
-        "to_node_id": to_node,
         "to_port_name": edge_data.get("to_port_name"),
     }
 
