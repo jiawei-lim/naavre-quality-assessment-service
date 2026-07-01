@@ -14,6 +14,7 @@ from .workflow_file_graph_check_service import (
     get_unfulfilled_inputs,
     serialize_graph_check_results,
 )
+from .workflow_file_semantic_check_service import get_semantic_checks
 
 def build_workflow_multidigraph(
     workflow_file: WorkflowFile,
@@ -86,6 +87,22 @@ def run_graph_checks(graph: nx.MultiDiGraph) -> dict[str, Any]:
     return {
         "graph_checks": serialize_graph_check_results(results),
     }
+
+
+def run_workflow_checks(graph: nx.MultiDiGraph) -> dict[str, Any]:
+    result = run_graph_checks(graph)
+
+    try:
+        result["semantic_checks"] = get_semantic_checks(graph)
+        result["semantic_checks_error"] = None
+    except Exception as error:
+        result["semantic_checks"] = []
+        result["semantic_checks_error"] = {
+            "message": "Semantic checks could not be completed.",
+            "detail": str(error),
+        }
+
+    return result
 
 
 def _ensure_referenced_node(graph: nx.MultiDiGraph, node_id: str) -> None:
