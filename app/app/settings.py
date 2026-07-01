@@ -23,6 +23,10 @@ def env_int(name, default):
     return int(os.environ.get(name, default))
 
 
+def env_float(name, default):
+    return float(os.environ.get(name, default))
+
+
 load_dotenv(BASE_DIR.parent / ".env")
 
 
@@ -157,3 +161,5 @@ OPENROUTER_APP_TITLE = os.getenv(
 LLM_MODEL = os.getenv("LLM_MODEL", "~openai/gpt-latest")
 LLM_TIMEOUT_SECONDS = env_int("LLM_TIMEOUT_SECONDS", 60)
 LLM_MAX_TOKENS = env_int("LLM_MAX_TOKENS", 4096)
+LLM_TEMPERATURE = env_float("LLM_TEMPERATURE", 0.0)
+LLM_TOP_P = env_float("LLM_TOP_P", 1.0)

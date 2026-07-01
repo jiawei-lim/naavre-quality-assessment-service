@@ -58,6 +58,8 @@ class OpenRouterLLMClient:
         model: str | None = None,
         timeout_seconds: int | float | None = None,
         max_tokens: int | None = None,
+        temperature: float | None = None,
+        top_p: float | None = None,
         http_referer: str | None = None,
         app_title: str | None = None,
         sdk_client: Any | None = None,
@@ -72,6 +74,10 @@ class OpenRouterLLMClient:
         self.max_tokens = (
             max_tokens if max_tokens is not None else settings.LLM_MAX_TOKENS
         )
+        self.temperature = (
+            temperature if temperature is not None else settings.LLM_TEMPERATURE
+        )
+        self.top_p = top_p if top_p is not None else settings.LLM_TOP_P
         self.http_referer = (
             http_referer
             if http_referer is not None
@@ -102,6 +108,8 @@ class OpenRouterLLMClient:
             ],
             "max_tokens": request.max_tokens or self.max_tokens,
             "stream": False,
+            "temperature": self.temperature,
+            "top_p": self.top_p,
         }
 
         if request.json_output:

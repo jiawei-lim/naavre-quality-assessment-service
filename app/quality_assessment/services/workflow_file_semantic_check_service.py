@@ -31,7 +31,7 @@ The JSON response must follow this structure:
 {
     "semantic_checks": [
         {
-            "check_type": "checked quality dimension",
+            "check_type": "semantic_type_compatibility or component_purpose_alignment or workflow anti-patterns",
             "severity": "always output as warning",
             "message": "Explain the semantic issue clearly.",
             "components": [
@@ -54,6 +54,11 @@ The JSON response must follow this structure:
         }
     ]
 }
+
+The check_type value must be exactly one of:
+- "semantic_type_compatibility"
+- "component_purpose_alignment"
+- "workflow anti-patterns"
 
 Each object in semantic_checks must correspond to exactly one detected issue instance.
 Do not combine multiple problems, multiple unrelated links, or multiple unrelated components into one semantic check.
