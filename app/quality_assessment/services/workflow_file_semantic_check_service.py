@@ -32,6 +32,8 @@ The JSON response must follow this structure:
     "semantic_checks": [
         {
             "check_type": "semantic_type_compatibility or component_purpose_alignment or workflow anti-patterns",
+            "quality_dimension: "Functional Suitability",
+            "quality_subcharacteristic":"Appropriateness",
             "severity": "always output as warning",
             "message": "Explain the semantic issue clearly.",
             "components": [
