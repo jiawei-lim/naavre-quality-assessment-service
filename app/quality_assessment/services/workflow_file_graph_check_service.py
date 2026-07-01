@@ -34,6 +34,8 @@ def get_cycles(graph: nx.MultiDiGraph) -> list[GraphCheckResult]:
     return [
         GraphCheckResult(
             check_type="cycle",
+            quality_dimension="Functional Suitability",
+            quality_subcharacteristic="Correctness",
             severity="warning",
             message="Workflow contains a directed cycle.",
             components=[_component_ref(graph, node_id) for node_id in cycle],
@@ -67,6 +69,8 @@ def get_disconnected_components(graph: nx.MultiDiGraph) -> list[GraphCheckResult
         results.append(
             GraphCheckResult(
                 check_type="disconnected_component",
+                quality_dimension="Functional Suitability",
+                quality_subcharacteristic="Correctness",
                 severity="warning",
                 message="Workflow contains a disconnected component.",
                 components=[
@@ -113,6 +117,8 @@ def get_input_output_type_mismatches(
         results.append(
             GraphCheckResult(
                 check_type="input_output_type_mismatch",
+                quality_dimension="Functional Suitability",
+                quality_subcharacteristic="Correctness",
                 severity="warning",
                 message=(
                     f"Link from '{from_node}.{from_port_name}' ({from_type}) "
@@ -158,7 +164,9 @@ def get_unfulfilled_inputs(graph: nx.MultiDiGraph) -> list[GraphCheckResult]:
             results.append(
                 GraphCheckResult(
                     check_type="unfulfilled_input",
-                    severity="warning",
+                    quality_dimension="Functional Suitability",
+                    quality_subcharacteristic="Correctness",
+                    severity="Completeness",
                     message=(
                         f"Input '{input_port.name}' of component '{node_id}' "
                         "is not fulfilled by any incoming link."
@@ -301,6 +309,8 @@ def _get_links_with_missing_endpoints(
     return [
         GraphCheckResult(
             check_type="invalid_link",
+            quality_dimension="Functional Suitability",
+            quality_subcharacteristic="Correctness",
             severity="error",
             message="Workflow contains a link with a missing source or target node.",
             components=_invalid_link_component_refs(graph, raw_link),
@@ -333,6 +343,8 @@ def _get_duplicate_links(graph: nx.MultiDiGraph) -> list[GraphCheckResult]:
         results.append(
             GraphCheckResult(
                 check_type="invalid_link",
+                quality_dimension="Functional Suitability",
+                quality_subcharacteristic="Correctness",
                 severity="error",
                 message=(
                     "Workflow contains duplicate links from "
@@ -370,6 +382,8 @@ def _get_same_direction_port_links(
         results.append(
             GraphCheckResult(
                 check_type="invalid_link",
+                quality_dimension="Functional Suitability",
+                quality_subcharacteristic="Correctness",
                 severity="error",
                 message=(
                     "Workflow contains an invalid "

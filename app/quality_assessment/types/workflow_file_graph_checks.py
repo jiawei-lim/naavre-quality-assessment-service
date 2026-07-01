@@ -21,6 +21,8 @@ class GraphCheckLinkRef:
 @dataclass(frozen=True)
 class GraphCheckResult:
     check_type: str
+    quality_dimension:str
+    quality_subcharacteristic:str
     severity: str
     message: str
     components: list[GraphCheckComponentRef] = field(default_factory=list)
