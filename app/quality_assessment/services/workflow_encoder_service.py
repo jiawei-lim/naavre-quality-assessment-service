@@ -101,6 +101,8 @@ def _encode_link(
 ) -> dict[str, Any]:
     return {
         "id": edge_data.get("link_id") or edge_key,
+        "from_node_id": from_node,
+        "to_node_id": to_node,
         "from_port_name": edge_data.get("from_port_name"),
         "to_port_name": edge_data.get("to_port_name"),
     }
