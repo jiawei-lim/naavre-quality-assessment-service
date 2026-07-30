@@ -8,35 +8,28 @@ from quality_assessment.types import (
     GraphCheckResult,
 )
 
+def get_size(graph: nx.MultiDiGraph) -> int:
+    return len(graph.nodes)
 
-def get_self_loops(graph: nx.MultiDiGraph) -> list[GraphCheckResult]:
-    results = []
+def get_size(graph: nx.MultiDiGraph) -> int:
+    return nx.diameter(graph)
 
-    for from_node, _, _, edge_data in nx.selfloop_edges(
-        graph,
-        keys=True,
-        data=True,
-    ):
-        results.append(
-            GraphCheckResult(
-                check_type="self_loop",
-                severity="warning",
-                message=f"Component '{from_node}' has a link to itself.",
-                components=[_component_ref(graph, from_node)],
-                links=[_link_ref(from_node, from_node, edge_data)],
-            )
-        )
+def get_cnc(graph: nx.MultiDiGraph) -> int:
+    return len(graph.nodes) / len(graph.edges)
 
-    return results
-
+def get_specification_completeness(graph: nx.MultiDiGraph) -> list[GraphCheckResult]:
+    pass
 
 def get_cycles(graph: nx.MultiDiGraph) -> list[GraphCheckResult]:
-    return [
+    """
+    Graph Acyclicity
+    """
+    result = [
         GraphCheckResult(
             check_type="cycle",
             quality_dimension="Functional Suitability",
             quality_subcharacteristic="Correctness",
-            severity="warning",
+            severity="error",
             message="Workflow contains a directed cycle.",
             components=[_component_ref(graph, node_id) for node_id in cycle],
             links=_links_between_node_sequence(graph, cycle),
@@ -44,65 +37,27 @@ def get_cycles(graph: nx.MultiDiGraph) -> list[GraphCheckResult]:
         for cycle in nx.simple_cycles(graph)
     ]
 
-
-def get_isolated_nodes(graph: nx.MultiDiGraph) -> list[GraphCheckResult]:
-    return [
-        GraphCheckResult(
-            check_type="isolated_node",
-            severity="warning",
-            message=f"Component '{node_id}' is not connected to the workflow graph.",
-            components=[_component_ref(graph, node_id)],
+    if result == []:
+        result = [
+            GraphCheckResult(
+            check_type="cycle",
+            quality_dimension="Functional Suitability",
+            quality_subcharacteristic="Correctness",
+            severity="passed",
+            message="Workflow does not contain a cycle.",
+            components=[],
             links=[],
         )
-        for node_id in nx.isolates(graph)
-    ]
-
-
-def get_disconnected_components(graph: nx.MultiDiGraph) -> list[GraphCheckResult]:
-    results = []
-
-    for component in nx.weakly_connected_components(graph):
-        if len(component) == graph.number_of_nodes():
-            continue
-
-        component_node_ids = sorted(component)
-        results.append(
-            GraphCheckResult(
-                check_type="disconnected_component",
-                quality_dimension="Functional Suitability",
-                quality_subcharacteristic="Correctness",
-                severity="warning",
-                message="Workflow contains a disconnected component.",
-                components=[
-                    _component_ref(graph, node_id) for node_id in component_node_ids
-                ],
-                links=_links_within_component(graph, set(component_node_ids)),
-            )
-        )
-
-    return results
-
-
-def get_orphaned_nodes(graph: nx.MultiDiGraph) -> list[GraphCheckResult]:
-    return [
-        GraphCheckResult(
-            check_type="orphaned_node",
-            severity="warning",
-            message=(
-                f"Component '{node_id}' is referenced by a link but is missing "
-                "from the workflow nodes."
-            ),
-            components=[_component_ref(graph, node_id)],
-            links=_incident_links(graph, node_id),
-        )
-        for node_id, node_data in graph.nodes(data=True)
-        if node_data.get("referenced_only")
-    ]
+        ]
+    return  result
 
 
 def get_input_output_type_mismatches(
     graph: nx.MultiDiGraph,
 ) -> list[GraphCheckResult]:
+    """
+    I/O mismatch check
+    """
     results = []
 
     for from_node, to_node, _, edge_data in graph.edges(keys=True, data=True):
@@ -133,11 +88,27 @@ def get_input_output_type_mismatches(
             )
         )
 
+        if results == []:
+            results.append(
+                GraphCheckResult(
+                check_type="input_output_type_mismatch",
+                quality_dimension="Functional Suitability",
+                quality_subcharacteristic="Correctness",
+                severity="passed",
+                message="All input and output links have matching types",
+                components=[],
+                links=[],
+                )
+            )
+
     return results
 
 
-#Check all input fulfilled
+
 def get_unfulfilled_inputs(graph: nx.MultiDiGraph) -> list[GraphCheckResult]:
+    """
+    Check if all inputs fulfilled
+    """
     results = []
 
     #For all nodes in graph
@@ -166,7 +137,7 @@ def get_unfulfilled_inputs(graph: nx.MultiDiGraph) -> list[GraphCheckResult]:
                     check_type="unfulfilled_input",
                     quality_dimension="Functional Suitability",
                     quality_subcharacteristic="Correctness",
-                    severity="Completeness",
+                    severity="error",
                     message=(
                         f"Input '{input_port.name}' of component '{node_id}' "
                         "is not fulfilled by any incoming link."
@@ -176,15 +147,45 @@ def get_unfulfilled_inputs(graph: nx.MultiDiGraph) -> list[GraphCheckResult]:
                 )
             )
 
+    if results == []:
+        results.append(
+            GraphCheckResult(
+                check_type="unfulfilled_input",
+                quality_dimension="Functional Suitability",
+                quality_subcharacteristic="Correctness",
+                severity="passed",
+                message="All required inputs are fulfilled",
+                components=[],
+                links=[],
+            )
+        )
+
     return results
 
 
 def get_invalid_links(graph: nx.MultiDiGraph) -> list[GraphCheckResult]:
-    return [
-        *_get_links_with_missing_endpoints(graph),
+    """
+    Check for invalid links
+    """
+    results = [
         *_get_duplicate_links(graph),
         *_get_same_direction_port_links(graph),
     ]
+
+    if results == []:
+        results.append(
+        GraphCheckResult(
+            check_type="invalid_link",
+            quality_dimension="Functional Suitability",
+            quality_subcharacteristic="Correctness",
+            severity="passed",
+            message="No invalid links are detected",
+            components=[],
+            links=[],
+            )
+        )
+
+    return results
 
 
 def serialize_graph_check_results(
@@ -192,11 +193,17 @@ def serialize_graph_check_results(
 ) -> list[dict]:
     return [asdict(result) for result in results]
 
+##################################
+#        HELPER METHODS          #
+##################################
 
 def _component_ref(
     graph: nx.MultiDiGraph,
     node_id: str,
 ) -> GraphCheckComponentRef:
+    """
+    Format component for output
+    """
     if node_id not in graph:
         return GraphCheckComponentRef(node_id=node_id)
 
@@ -216,6 +223,9 @@ def _link_ref(
     to_node: str,
     edge_data: dict,
 ) -> GraphCheckLinkRef:
+    """
+    Format edges for output
+    """
     return GraphCheckLinkRef(
         link_id=edge_data.get("link_id"),
         from_node_id=from_node,
@@ -266,60 +276,6 @@ def _links_between_node_sequence(
     return links
 
 
-def _links_within_component(
-    graph: nx.MultiDiGraph,
-    node_ids: set[str],
-) -> list[GraphCheckLinkRef]:
-    return [
-        _link_ref(from_node, to_node, edge_data)
-        for from_node, to_node, edge_data in graph.edges(data=True)
-        if from_node in node_ids and to_node in node_ids
-    ]
-
-
-def _incident_links(
-    graph: nx.MultiDiGraph,
-    node_id: str,
-) -> list[GraphCheckLinkRef]:
-    return [
-        _link_ref(from_node, to_node, edge_data)
-        for from_node, to_node, edge_data in graph.in_edges(node_id, data=True)
-    ] + [
-        _link_ref(from_node, to_node, edge_data)
-        for from_node, to_node, edge_data in graph.out_edges(node_id, data=True)
-    ]
-
-
-def _invalid_link_component_refs(
-    graph: nx.MultiDiGraph,
-    raw_link: dict,
-) -> list[GraphCheckComponentRef]:
-    link_ref = _raw_link_ref(raw_link)
-    node_ids = [
-        node_id
-        for node_id in (link_ref.from_node_id, link_ref.to_node_id)
-        if node_id and node_id in graph
-    ]
-    return [_component_ref(graph, node_id) for node_id in node_ids]
-
-
-def _get_links_with_missing_endpoints(
-    graph: nx.MultiDiGraph,
-) -> list[GraphCheckResult]:
-    return [
-        GraphCheckResult(
-            check_type="invalid_link",
-            quality_dimension="Functional Suitability",
-            quality_subcharacteristic="Correctness",
-            severity="error",
-            message="Workflow contains a link with a missing source or target node.",
-            components=_invalid_link_component_refs(graph, raw_link),
-            links=[_raw_link_ref(raw_link)],
-        )
-        for raw_link in graph.graph.get("invalid_links", [])
-    ]
-
-
 def _get_duplicate_links(graph: nx.MultiDiGraph) -> list[GraphCheckResult]:
     links_by_endpoints = {}
 
@@ -358,7 +314,6 @@ def _get_duplicate_links(graph: nx.MultiDiGraph) -> list[GraphCheckResult]:
                 links=links,
             )
         )
-
     return results
 
 
@@ -398,7 +353,6 @@ def _get_same_direction_port_links(
                 links=[_link_ref(from_node, to_node, edge_data)],
             )
         )
-
     return results
 
 

@@ -2,8 +2,10 @@ from rest_framework import serializers
 from .models import *
 
 class AssessmentRunSerializer(serializers.ModelSerializer):
+    # Add asset data type field
     asset_data = serializers.JSONField(write_only=True, required=False, default=dict)
 
+    # Uses AssessmentRun model fields
     class Meta:
         model = AssessmentRun
         fields = [

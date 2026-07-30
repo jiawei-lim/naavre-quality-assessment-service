@@ -3,24 +3,21 @@ from typing import Any
 import networkx as nx
 
 from quality_assessment.types import WorkflowFile
-from .workflow_file_graph_check_service import (
+from .graph_check_service import (
     get_cycles,
-    get_disconnected_components,
     get_input_output_type_mismatches,
     get_invalid_links,
-    get_isolated_nodes,
-    get_orphaned_nodes,
-    get_self_loops,
     get_unfulfilled_inputs,
     serialize_graph_check_results,
 )
-from .workflow_file_semantic_check_service import get_semantic_checks
+from .semantic_check_service import get_semantic_checks
 
 def build_workflow_multidigraph(
     workflow_file: WorkflowFile,
 ) -> nx.MultiDiGraph:
     graph = nx.MultiDiGraph()
 
+    #Graph level Metadata
     graph.graph.update(
         {
             "asset_id": workflow_file.id,
@@ -74,11 +71,7 @@ def build_workflow_multidigraph(
 
 def run_graph_checks(graph: nx.MultiDiGraph) -> dict[str, Any]:
     results = [
-        *get_self_loops(graph),
         *get_cycles(graph),
-        *get_isolated_nodes(graph),
-        *get_disconnected_components(graph),
-        *get_orphaned_nodes(graph),
         *get_input_output_type_mismatches(graph),
         *get_unfulfilled_inputs(graph),
         *get_invalid_links(graph),
@@ -91,17 +84,7 @@ def run_graph_checks(graph: nx.MultiDiGraph) -> dict[str, Any]:
 
 def run_workflow_checks(graph: nx.MultiDiGraph) -> dict[str, Any]:
     result = run_graph_checks(graph)
-
-    try:
-        result["semantic_checks"] = get_semantic_checks(graph)
-        result["semantic_checks_error"] = None
-    except Exception as error:
-        result["semantic_checks"] = []
-        result["semantic_checks_error"] = {
-            "message": "Semantic checks could not be completed.",
-            "detail": str(error),
-        }
-
+    
     return result
 
 

@@ -2,8 +2,8 @@ import json
 
 import networkx as nx
 
-from .llm_client_service import LLMMessage, LLMRequest, get_llm_client
-from .workflow_encoder_service import encode_workflow_graph_for_semantic_analysis
+from ..semantic.llm_client_service import LLMMessage, LLMRequest, get_llm_client
+from ..semantic.workflow_encoder_service import encode_workflow_graph_for_semantic_analysis
 
 SYSTEM_PROMPT = """
 You are a semantic quality assessor for NaaVRE scientific workflows.
@@ -34,7 +34,7 @@ The JSON response must follow this structure:
             "check_type": "semantic_type_compatibility or component_purpose_alignment or workflow anti-patterns",
             "quality_dimension: "Functional Suitability",
             "quality_subcharacteristic":"Appropriateness",
-            "severity": "always output as warning",
+            "severity": "warning",
             "message": "Explain the semantic issue clearly.",
             "components": [
                 {

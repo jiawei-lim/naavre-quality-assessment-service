@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from .adapters import WorkflowFileAdapter
 from .models import *
 from .serializers import *
-from .services import workflow_file_service
+from .services.workflow_file import workflow_file_service
 
 
 class AssessmentReportListView(generics.ListAPIView):
@@ -25,9 +25,11 @@ class AssessmentRunView(generics.GenericAPIView):
     supported_workflow_file_asset_types = {"workflow", "workflow_file"}
 
     def post(self, request, *args, **kwargs):
+        #Validate Post Data
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
+        #Validate Asset Type
         asset_type = serializer.validated_data["asset_type"]
         if asset_type not in self.supported_workflow_file_asset_types:
             raise ValidationError(
@@ -39,18 +41,25 @@ class AssessmentRunView(generics.GenericAPIView):
                 }
             )
 
+        #Extracts workflow file data and convert it into WorkflowFile type
         workflow_file = WorkflowFileAdapter().from_payload(
             self._workflow_file_payload_from_validated_data(
                 serializer.validated_data
             )
         )
 
+        #Build workflow file from .naavrewf JSON into networkx graph
         graph = workflow_file_service.build_workflow_multidigraph(workflow_file)
+
+        #Run checks
         result = workflow_file_service.run_workflow_checks(graph)
 
         return Response(result)
 
     def _workflow_file_payload_from_validated_data(self, validated_data):
+        """
+        Extract workflow file data
+        """
         asset_data = validated_data.get("asset_data", {})
 
         if not isinstance(asset_data, dict):
