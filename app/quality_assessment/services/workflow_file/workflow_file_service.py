@@ -1,6 +1,7 @@
 from typing import Any
 
 import networkx as nx
+from ..code.code_check_service import *
 
 from quality_assessment.types import WorkflowFile
 from .graph_check_service import (
@@ -10,7 +11,6 @@ from .graph_check_service import (
     get_unfulfilled_inputs,
     serialize_graph_check_results,
 )
-from .semantic_check_service import get_semantic_checks
 
 def build_workflow_multidigraph(
     workflow_file: WorkflowFile,
@@ -80,12 +80,6 @@ def run_graph_checks(graph: nx.MultiDiGraph) -> dict[str, Any]:
     return {
         "graph_checks": serialize_graph_check_results(results),
     }
-
-
-def run_workflow_checks(graph: nx.MultiDiGraph) -> dict[str, Any]:
-    result = run_graph_checks(graph)
-    
-    return result
 
 
 def _ensure_referenced_node(graph: nx.MultiDiGraph, node_id: str) -> None:

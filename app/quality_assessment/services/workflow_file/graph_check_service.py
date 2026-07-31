@@ -3,8 +3,8 @@ from dataclasses import asdict
 import networkx as nx
 
 from quality_assessment.types import (
-    GraphCheckComponentRef,
-    GraphCheckLinkRef,
+    GraphCheckComponent,
+    GraphCheckLink,
     GraphCheckResult,
 )
 
@@ -200,17 +200,17 @@ def serialize_graph_check_results(
 def _component_ref(
     graph: nx.MultiDiGraph,
     node_id: str,
-) -> GraphCheckComponentRef:
+) -> GraphCheckComponent:
     """
     Format component for output
     """
     if node_id not in graph:
-        return GraphCheckComponentRef(node_id=node_id)
+        return GraphCheckComponent(node_id=node_id)
 
     node_data = graph.nodes[node_id]
     component = node_data.get("component")
 
-    return GraphCheckComponentRef(
+    return GraphCheckComponent(
         node_id=node_id,
         title=node_data.get("title") or getattr(component, "title", None),
         node_type=node_data.get("node_type"),
@@ -222,11 +222,11 @@ def _link_ref(
     from_node: str,
     to_node: str,
     edge_data: dict,
-) -> GraphCheckLinkRef:
+) -> GraphCheckLink:
     """
     Format edges for output
     """
-    return GraphCheckLinkRef(
+    return GraphCheckLink(
         link_id=edge_data.get("link_id"),
         from_node_id=from_node,
         to_node_id=to_node,
@@ -235,11 +235,11 @@ def _link_ref(
     )
 
 
-def _raw_link_ref(raw_link: dict) -> GraphCheckLinkRef:
+def _raw_link_ref(raw_link: dict) -> GraphCheckLink:
     from_data = raw_link.get("from", {}) if isinstance(raw_link, dict) else {}
     to_data = raw_link.get("to", {}) if isinstance(raw_link, dict) else {}
 
-    return GraphCheckLinkRef(
+    return GraphCheckLink(
         link_id=raw_link.get("id") if isinstance(raw_link, dict) else None,
         from_node_id=from_data.get("nodeId"),
         to_node_id=to_data.get("nodeId"),
@@ -251,7 +251,7 @@ def _raw_link_ref(raw_link: dict) -> GraphCheckLinkRef:
 def _links_between_node_sequence(
     graph: nx.MultiDiGraph,
     node_ids: list[str],
-) -> list[GraphCheckLinkRef]:
+) -> list[GraphCheckLink]:
     links = []
 
     if not node_ids:

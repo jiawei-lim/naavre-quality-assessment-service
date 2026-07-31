@@ -6,7 +6,7 @@ from .adapters import WorkflowFileAdapter
 from .models import *
 from .serializers import *
 from .services.workflow_file import workflow_file_service
-
+from .services import metrics_service
 
 class AssessmentReportListView(generics.ListAPIView):
     queryset = AssessmentReport.objects.all()
@@ -52,7 +52,7 @@ class AssessmentRunView(generics.GenericAPIView):
         graph = workflow_file_service.build_workflow_multidigraph(workflow_file)
 
         #Run checks
-        result = workflow_file_service.run_workflow_checks(graph)
+        result = metrics_service.run_checks(graph)
 
         return Response(result)
 

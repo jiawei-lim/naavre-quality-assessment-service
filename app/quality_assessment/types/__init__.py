@@ -12,9 +12,9 @@ from quality_assessment.types.workflow_file import (
     WorkflowFileLink,
     WorkflowFileNode,
 )
-from quality_assessment.types.workflow_file_graph_checks import (
-    GraphCheckComponentRef,
-    GraphCheckLinkRef,
+from quality_assessment.types.result_types import (
+    GraphCheckComponent,
+    GraphCheckLink,
     GraphCheckResult,
 )
 
@@ -29,7 +29,7 @@ __all__ = [
     "WorkflowFile",
     "WorkflowFileLink",
     "WorkflowFileNode",
-    "GraphCheckComponentRef",
-    "GraphCheckLinkRef",
+    "GraphCheckComponent",
+    "GraphCheckLink",
     "GraphCheckResult",
 ]
