@@ -4,13 +4,7 @@ import networkx as nx
 from ..code.code_check_service import *
 
 from quality_assessment.types import WorkflowFile
-from .graph_check_service import (
-    get_cycles,
-    get_input_output_type_mismatches,
-    get_invalid_links,
-    get_unfulfilled_inputs,
-    serialize_graph_check_results,
-)
+from .graph_check_service import *
 
 def build_workflow_multidigraph(
     workflow_file: WorkflowFile,
@@ -75,6 +69,9 @@ def run_graph_checks(graph: nx.MultiDiGraph) -> dict[str, Any]:
         *get_input_output_type_mismatches(graph),
         *get_unfulfilled_inputs(graph),
         *get_invalid_links(graph),
+        get_size(graph),
+        get_longest_path(graph),
+        get_cnc(graph)
     ]
 
     return {

@@ -2,20 +2,40 @@ from dataclasses import asdict
 
 import networkx as nx
 
-from quality_assessment.types import (
+from ...types.result_types import (
     GraphCheckComponent,
     GraphCheckLink,
     GraphCheckResult,
+    ValueCheckResult
 )
 
-def get_size(graph: nx.MultiDiGraph) -> int:
-    return len(graph.nodes)
+def get_size(graph: nx.MultiDiGraph) -> ValueCheckResult:
+    return ValueCheckResult(
+            check_type = "workflow_size",
+            quality_dimension = "maintainability",
+            quality_subcharacteristic= "analyzability",
+            message = "Size of the workflow (number of nodes)",
+            value = len(graph.nodes)
+        )
 
-def get_size(graph: nx.MultiDiGraph) -> int:
-    return nx.diameter(graph)
+def get_longest_path(graph: nx.MultiDiGraph) -> ValueCheckResult:
+    return ValueCheckResult(
+            check_type = "workflow_longest_path",
+            quality_dimension = "maintainability",
+            quality_subcharacteristic= "analyzability",
+            message = "Longest path of the workflow",
+            value = nx.dag_longest_path_length(graph)
+        )
 
-def get_cnc(graph: nx.MultiDiGraph) -> int:
-    return len(graph.nodes) / len(graph.edges)
+
+def get_cnc(graph: nx.MultiDiGraph) -> ValueCheckResult:
+    return ValueCheckResult(
+            check_type = "workflow_cnc",
+            quality_dimension = "maintainability",
+            quality_subcharacteristic= "analyzability",
+            message = "Ration of components in workflow to number of edges",
+            value =  round(len(graph.nodes) / len(graph.edges),2)
+        )
 
 def get_specification_completeness(graph: nx.MultiDiGraph) -> list[GraphCheckResult]:
     pass
