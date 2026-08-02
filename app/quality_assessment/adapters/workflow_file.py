@@ -6,6 +6,9 @@ from quality_assessment.types import WorkflowFile, WorkflowFileLink, WorkflowFil
 
 
 class WorkflowFileAdapter:
+    """
+    Adapts workflow file from API payload into WorkflowFile type
+    """
     def __init__(
         self,
         workflow_component_adapter: WorkflowComponentAdapter | None = None,
@@ -15,7 +18,9 @@ class WorkflowFileAdapter:
         )
 
     def from_payload(self, payload: dict[str, Any]) -> WorkflowFile:
+        # verify data against workflow file schema
         data = self._validated_data(payload)
+
         chart = data["chart"]
         raw_chart = payload.get("chart", {}) if isinstance(payload, dict) else {}
 
