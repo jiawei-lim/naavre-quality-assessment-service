@@ -8,6 +8,7 @@ from ...types.result_types import (
     GraphCheckResult,
     ValueCheckResult
 )
+from ...types.workflow_components import WorkflowComponent
 
 def get_size(graph: nx.MultiDiGraph) -> ValueCheckResult:
     return ValueCheckResult(
@@ -38,7 +39,40 @@ def get_cnc(graph: nx.MultiDiGraph) -> ValueCheckResult:
         )
 
 def get_specification_completeness(graph: nx.MultiDiGraph) -> list[GraphCheckResult]:
-    pass
+    results = []
+
+    for node_id, node_data in graph.nodes(data=True):
+        component = node_data.get("component")
+        if node_data.get("referenced_only") or component is None or node_data.get("node_type") != "workflow-cell":
+            continue
+
+        results.extend(
+            GraphCheckResult(
+                check_type="specification_completeness",
+                quality_dimension="Functional Suitability",
+                quality_subcharacteristic="Completeness",
+                severity="error",
+                message=f"Component '{node_id}' {issue}.",
+                components=[_component_ref(graph, node_id)],
+                links=[],
+            )
+            for issue in _incomplete_specifications(component)
+        )
+
+    if results == []:
+        results.append(
+            GraphCheckResult(
+                check_type="specification_completeness",
+                quality_dimension="Functional Suitability",
+                quality_subcharacteristic="Completeness",
+                severity="passed",
+                message="All components are fully specified",
+                components=[],
+                links=[],
+            )
+        )
+
+    return results
 
 def get_cycles(graph: nx.MultiDiGraph) -> list[GraphCheckResult]:
     """
@@ -208,6 +242,8 @@ def get_invalid_links(graph: nx.MultiDiGraph) -> list[GraphCheckResult]:
     return results
 
 
+
+
 def serialize_graph_check_results(
     results: list[GraphCheckResult],
 ) -> list[dict]:
@@ -236,6 +272,28 @@ def _component_ref(
         node_type=node_data.get("node_type"),
         component_ref=getattr(component, "component_ref", None),
     )
+
+
+def _incomplete_specifications(component: WorkflowComponent) -> list[str]:
+    base_image = component.base_container_image
+    untyped_ports = [
+        port.name
+        for port in [*component.inputs, *component.outputs]
+        if not port.type
+    ]
+
+    return [
+        issue
+        for issue, incomplete in [
+            ("has no container image", not component.container_image),
+            ("has no base container image build", not getattr(base_image, "build", None)),
+            ("has no base container image runtime", not getattr(base_image, "runtime", None)),
+            ("has no kernel", not component.kernel),
+            (f"has untyped ports: {', '.join(untyped_ports)}", untyped_ports),
+            ("is still a draft", component.is_draft),
+        ]
+        if incomplete
+    ]
 
 
 def _link_ref(
