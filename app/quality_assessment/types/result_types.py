@@ -5,8 +5,8 @@ from typing import Any, Literal
 class BaseCheck:
     check_type: str
     quality_dimension:str
-    quality_subcharacteristic:str
     message: str
+    quality_subcharacteristic:str | None = None
     severity: Literal["warning", "error", "passed"] | None = None
 
 

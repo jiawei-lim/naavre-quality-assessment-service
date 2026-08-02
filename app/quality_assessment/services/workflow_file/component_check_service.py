@@ -2,7 +2,7 @@ from dataclasses import asdict
 
 import networkx as nx
 from typing import Any
-from ..code.code_check_service import run_code_checks
+from ..code.code_check_service import *
 from ...types.result_types import ValueCheckResult, ComponentCheckResult
 
 def run_component_checks(graph:nx.MultiDiGraph) -> dict[str, Any]:
@@ -12,7 +12,8 @@ def run_component_checks(graph:nx.MultiDiGraph) -> dict[str, Any]:
             checks = []
             source_url = node_data.get("source_url")
             if source_url:
-                checks += run_code_checks(source_url + "/task.py")
+                loc,cc,urls = run_code_checks(source_url + "/task.py")
+                checks += [loc,cc]
 
             checks += [
                 get_hardcoded_configurations(node_data),
@@ -20,6 +21,7 @@ def run_component_checks(graph:nx.MultiDiGraph) -> dict[str, Any]:
                 get_fan_out(graph, node_id),
                 get_interface_size(node_data),
                 get_default_value_completeness(node_data),
+                get_external_service_dependency(node_data,urls)
             ]
 
             component_check_results += [
@@ -99,5 +101,26 @@ def get_default_value_completeness(node:dict[str,Any]) -> ValueCheckResult:
             quality_dimension = "sustainability",
             quality_subcharacteristic= None,
             message = "Parameters should have default values",
+            severity = "passed"
+        )
+
+def get_external_service_dependency(node:dict[str,Any],urls:ValueCheckResult) -> ValueCheckResult:
+    component = node.get("component")
+    secrets = component.secrets
+
+    if len(secrets) > 0 or len(urls.value) > 0:
+        return ValueCheckResult(
+            check_type = "external_service_dependency",
+            quality_dimension = "sustainability",
+            quality_subcharacteristic= None,
+            message = "Calls to external services increases exposure to decay",
+            value = urls.value + secrets
+        )
+
+    return ValueCheckResult(
+            check_type = "external_service_dependency",
+            quality_dimension = "sustainability",
+            quality_subcharacteristic= None,
+            message = "Calls to external services increases exposure to decay",
             severity = "passed"
         )
