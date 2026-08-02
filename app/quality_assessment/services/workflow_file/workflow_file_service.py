@@ -79,6 +79,22 @@ def run_graph_checks(graph: nx.MultiDiGraph) -> dict[str, Any]:
     }
 
 
+def run_workflow_checks(graph: nx.MultiDiGraph) -> dict[str, Any]:
+    result = run_graph_checks(graph)
+
+    try:
+        result["semantic_checks"] = get_semantic_checks(graph)
+        result["semantic_checks_error"] = None
+    except Exception as error:
+        result["semantic_checks"] = []
+        result["semantic_checks_error"] = {
+            "message": "Semantic checks could not be completed.",
+            "detail": str(error),
+        }
+
+    return result
+
+
 def _ensure_referenced_node(graph: nx.MultiDiGraph, node_id: str) -> None:
     if node_id not in graph:
         graph.add_node(node_id, referenced_only=True)

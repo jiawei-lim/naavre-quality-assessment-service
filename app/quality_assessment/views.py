@@ -8,6 +8,7 @@ from .serializers import *
 from .services.workflow_file import workflow_file_service
 from .services import metrics_service
 
+
 class AssessmentReportListView(generics.ListAPIView):
     queryset = AssessmentReport.objects.all()
     serializer_class = AssessmentReportSerializer
