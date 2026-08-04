@@ -4,6 +4,12 @@ import networkx as nx
 from typing import Any
 from ..code.code_check_service import *
 from ...types.result_types import ValueCheckResult, ComponentCheckResult
+from ...adapters.workflow_components import WorkflowComponent
+
+THRESHOLDS = {
+    "INTERFACE_SIZE" : 7,
+}
+
 
 def run_component_checks(graph:nx.MultiDiGraph) -> dict[str, Any]:
     component_check_results = []
@@ -12,7 +18,7 @@ def run_component_checks(graph:nx.MultiDiGraph) -> dict[str, Any]:
             checks = []
             source_url = node_data.get("source_url")
             if source_url:
-                loc,cc,urls = run_code_checks(source_url + "/task.py")
+                loc,cc,urls = run_code_checks(node_data,source_url + "/task.py")
                 checks += [loc,cc]
 
             checks += [
@@ -68,17 +74,16 @@ def get_hardcoded_configurations(node:dict[str,Any]) -> ValueCheckResult:
         )
 
 def get_interface_size(node:dict[str,Any]) -> ValueCheckResult:
-    component = node.get("component")
+    component:WorkflowComponent = node.get("component")
     inputs = len(component.inputs)
-    outputs = len(component.outputs)
     parameters = len(component.parameters)
-    secrets = len(component.secrets)
     return ValueCheckResult(
         check_type = "interface_size",
         quality_dimension = "maintainability",
         quality_subcharacteristic= "modularity",
         message = "Interface size of the component",
-        value = inputs + outputs + parameters + secrets
+        value = inputs + parameters,
+        severity = "failed" if (inputs + parameters) > THRESHOLDS["INTERFACE_SIZE"] else "passed"
     )
 
 def get_default_value_completeness(node:dict[str,Any]) -> ValueCheckResult:

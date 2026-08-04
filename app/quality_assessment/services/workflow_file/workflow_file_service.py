@@ -70,6 +70,7 @@ def run_graph_checks(graph: nx.MultiDiGraph) -> dict[str, Any]:
         *get_unfulfilled_inputs(graph),
         *get_invalid_links(graph),
         *get_specification_completeness(graph),
+        *get_shared_configurations(graph),
         get_size(graph),
         get_longest_path(graph),
         get_cnc(graph)

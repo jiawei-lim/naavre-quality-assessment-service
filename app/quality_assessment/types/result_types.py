@@ -7,7 +7,7 @@ class BaseCheck:
     quality_dimension:str
     message: str
     quality_subcharacteristic:str | None = None
-    severity: Literal["warning", "error", "passed"] | None = None
+    severity: Literal["warning", "failed", "passed"] | None = None
 
 
 @dataclass(frozen=True)
