@@ -10,23 +10,39 @@ from ...types.result_types import (
 )
 from ...types.workflow_components import WorkflowComponent
 
+
+THRESHOLDS = {
+    "WORKFLOW_SIZE" : 31,
+}
+
 def get_size(graph: nx.MultiDiGraph) -> ValueCheckResult:
+    size = len(graph.nodes)
     return ValueCheckResult(
             check_type = "workflow_size",
             quality_dimension = "maintainability",
             quality_subcharacteristic= "analyzability",
             message = "Size of the workflow (number of nodes)",
-            value = len(graph.nodes)
+            value = size,
+            severity = "passed" if size <= THRESHOLDS["WORKFLOW_SIZE"] else "failed"
         )
 
 def get_longest_path(graph: nx.MultiDiGraph) -> ValueCheckResult:
-    return ValueCheckResult(
-            check_type = "workflow_longest_path",
-            quality_dimension = "maintainability",
-            quality_subcharacteristic= "analyzability",
-            message = "Longest path of the workflow",
-            value = nx.dag_longest_path_length(graph)
-        )
+    try:
+        return ValueCheckResult(
+                check_type = "workflow_longest_path",
+                quality_dimension = "maintainability",
+                quality_subcharacteristic= "analyzability",
+                message = "Longest path of the workflow",
+                value = nx.dag_longest_path_length(graph)
+            )
+    except:
+        return ValueCheckResult(
+                check_type = "workflow_longest_path",
+                quality_dimension = "maintainability",
+                quality_subcharacteristic= "analyzability",
+                message = "Longest path of the workflow can not be assessed due to cycle",
+                severity = "failed"
+            )
 
 
 def get_cnc(graph: nx.MultiDiGraph) -> ValueCheckResult:
@@ -51,7 +67,7 @@ def get_specification_completeness(graph: nx.MultiDiGraph) -> list[GraphCheckRes
                 check_type="specification_completeness",
                 quality_dimension="Functional Suitability",
                 quality_subcharacteristic="Completeness",
-                severity="error",
+                severity="failed",
                 message=f"Component '{node_id}' {issue}.",
                 components=[_component_ref(graph, node_id)],
                 links=[],
@@ -83,7 +99,7 @@ def get_cycles(graph: nx.MultiDiGraph) -> list[GraphCheckResult]:
             check_type="cycle",
             quality_dimension="Functional Suitability",
             quality_subcharacteristic="Correctness",
-            severity="error",
+            severity="failed",
             message="Workflow contains a directed cycle.",
             components=[_component_ref(graph, node_id) for node_id in cycle],
             links=_links_between_node_sequence(graph, cycle),
@@ -191,7 +207,7 @@ def get_unfulfilled_inputs(graph: nx.MultiDiGraph) -> list[GraphCheckResult]:
                     check_type="unfulfilled_input",
                     quality_dimension="Functional Suitability",
                     quality_subcharacteristic="Correctness",
-                    severity="error",
+                    severity="failed",
                     message=(
                         f"Input '{input_port.name}' of component '{node_id}' "
                         "is not fulfilled by any incoming link."
@@ -242,6 +258,40 @@ def get_invalid_links(graph: nx.MultiDiGraph) -> list[GraphCheckResult]:
     return results
 
 
+
+
+def get_shared_configurations(graph: nx.MultiDiGraph) -> list[GraphCheckResult]:
+    """
+    Configuration variable coupling check
+    """
+    nodes_by_conf: dict[tuple[str, str], list[str]] = {}
+
+    for node_id, node_data in graph.nodes(data=True):
+        if node_data.get("referenced_only") or node_data.get("node_type") != "workflow-cell":
+            continue
+
+        component = node_data.get("component")
+        if component is None:
+            continue
+
+        for conf in component.configurations:
+            nodes_by_conf.setdefault((conf.name, conf.assignation), []).append(node_id)
+
+    return [
+        GraphCheckResult(
+            check_type="shared_configuration",
+            quality_dimension="Maintainability",
+            quality_subcharacteristic="Reusability",
+            message=(
+                f"Configuration '{conf_name}' ({assignation}) is shared by "
+                f"{len(node_ids)} components."
+            ),
+            components=[_component_ref(graph, node_id) for node_id in node_ids],
+            links=[],
+        )
+        for (conf_name, assignation), node_ids in nodes_by_conf.items()
+        if len(node_ids) > 1
+    ]
 
 
 def serialize_graph_check_results(
@@ -379,7 +429,7 @@ def _get_duplicate_links(graph: nx.MultiDiGraph) -> list[GraphCheckResult]:
                 check_type="invalid_link",
                 quality_dimension="Functional Suitability",
                 quality_subcharacteristic="Correctness",
-                severity="error",
+                severity="failed",
                 message=(
                     "Workflow contains duplicate links from "
                     f"'{from_node}.{from_port_name}' to "
@@ -417,7 +467,7 @@ def _get_same_direction_port_links(
                 check_type="invalid_link",
                 quality_dimension="Functional Suitability",
                 quality_subcharacteristic="Correctness",
-                severity="error",
+                severity="failed",
                 message=(
                     "Workflow contains an invalid "
                     f"{from_direction}-to-{to_direction} link from "
