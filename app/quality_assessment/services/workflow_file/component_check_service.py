@@ -8,6 +8,8 @@ from ...adapters.workflow_components import WorkflowComponent
 
 THRESHOLDS = {
     "INTERFACE_SIZE" : 7,
+    "FAN_IN" : 5,
+    "FAN_OUT" : 5
 }
 
 
@@ -45,21 +47,25 @@ def run_component_checks(graph:nx.MultiDiGraph) -> dict[str, Any]:
     }
 
 def get_fan_in(graph:nx.MultiDiGraph, node_id:str) -> ValueCheckResult:
+    fan_in = len(set(graph.predecessors(node_id)))
     return ValueCheckResult(
             check_type = "fan_in",
             quality_dimension = "maintainability",
             quality_subcharacteristic= "modularity",
-            message = "The number of links that have the component as a destination",
-            value = graph.in_degree(node_id)
+            message = "The number of distinct components that the component takes input from",
+            value = fan_in,
+            severity = "failed" if fan_in >= THRESHOLDS["FAN_IN"] else "passed"
         )
 
 def get_fan_out(graph:nx.MultiDiGraph, node_id:str) -> ValueCheckResult:
+    fan_out = len(set(graph.successors(node_id)))
     return ValueCheckResult(
             check_type = "fan_out",
             quality_dimension = "maintainability",
             quality_subcharacteristic= "modularity",
             message = "The number of links that have the component as a source",
-            value = graph.out_degree(node_id)
+            value = fan_out,
+            severity = "failed" if fan_out >= THRESHOLDS["FAN_OUT"] else "passed"
         )
 
 def get_hardcoded_configurations(node:dict[str,Any]) -> ValueCheckResult:
@@ -119,13 +125,14 @@ def get_external_service_dependency(node:dict[str,Any],urls:ValueCheckResult) ->
             quality_dimension = "sustainability",
             quality_subcharacteristic= None,
             message = "Calls to external services increases exposure to decay",
-            value = urls.value + secrets
+            value = urls.value + secrets,
+            severity = "warning"
         )
 
     return ValueCheckResult(
             check_type = "external_service_dependency",
             quality_dimension = "sustainability",
             quality_subcharacteristic= None,
-            message = "Calls to external services increases exposure to decay",
+            message = "No calls to external services detected",
             severity = "passed"
         )
