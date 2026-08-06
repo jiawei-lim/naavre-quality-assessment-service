@@ -13,6 +13,7 @@ from ...types.workflow_components import WorkflowComponent
 
 THRESHOLDS = {
     "WORKFLOW_SIZE" : 31,
+    "CNC": 3
 }
 
 def get_size(graph: nx.MultiDiGraph) -> ValueCheckResult:
@@ -46,12 +47,14 @@ def get_longest_path(graph: nx.MultiDiGraph) -> ValueCheckResult:
 
 
 def get_cnc(graph: nx.MultiDiGraph) -> ValueCheckResult:
+    cnc  = round(len(graph.nodes) / len(graph.edges),2)
     return ValueCheckResult(
             check_type = "workflow_cnc",
             quality_dimension = "maintainability",
             quality_subcharacteristic= "analyzability",
             message = "Ration of components in workflow to number of edges",
-            value =  round(len(graph.nodes) / len(graph.edges),2)
+            value =  cnc,
+            severity = "failed" if cnc >= THRESHOLDS["CNC"] else "passed"
         )
 
 def get_specification_completeness(graph: nx.MultiDiGraph) -> list[GraphCheckResult]:
@@ -288,6 +291,7 @@ def get_shared_configurations(graph: nx.MultiDiGraph) -> list[GraphCheckResult]:
             ),
             components=[_component_ref(graph, node_id) for node_id in node_ids],
             links=[],
+            value = conf_name
         )
         for (conf_name, assignation), node_ids in nodes_by_conf.items()
         if len(node_ids) > 1

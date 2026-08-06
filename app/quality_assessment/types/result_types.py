@@ -34,6 +34,8 @@ class ValueCheckResult(BaseCheck):
 class GraphCheckResult(BaseCheck):
     components: list[GraphCheckComponent] = field(default_factory=list)
     links: list[GraphCheckLink] = field(default_factory=list)
+    value: float | int | list[Any] = None
+    
 
 @dataclass(frozen=True)
 class ComponentCheckResult(GraphCheckComponent):
