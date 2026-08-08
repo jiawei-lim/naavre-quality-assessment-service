@@ -78,4 +78,5 @@ class WorkflowFilePayloadSchema(serializers.Serializer):
     title = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     description = serializers.CharField(required=False, allow_blank=True)
     virtual_lab = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    fileName = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     chart = ChartSchema()

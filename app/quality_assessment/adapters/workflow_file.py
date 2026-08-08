@@ -29,6 +29,7 @@ class WorkflowFileAdapter:
             title=data.get("title"),
             description=data.get("description"),
             virtual_lab=data.get("virtual_lab"),
+            file_name=data.get("fileName"),
             nodes=self._nodes(chart.get("nodes", {}), raw_chart.get("nodes", {})),
             links=self._links(chart.get("links", {}), raw_chart.get("links", {})),
             raw_payload=payload,

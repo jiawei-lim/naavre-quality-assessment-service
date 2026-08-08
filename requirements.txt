@@ -6,3 +6,5 @@ openrouter == 0.10.5
 python-dotenv == 1.1.1
 PyGithub == 2.9.1
 radon == 6.0.1
+OWSLib == 0.36.0
+spdx-license-list == 3.28.0

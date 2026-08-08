@@ -5,6 +5,8 @@ from ..code.code_check_service import *
 
 from quality_assessment.types import WorkflowFile
 from .graph_check_service import *
+from ..fair.fair_check_service import *
+
 
 def build_workflow_multidigraph(
     workflow_file: WorkflowFile,
@@ -18,6 +20,7 @@ def build_workflow_multidigraph(
             "asset_type": "workflow_file",
             "title": workflow_file.title,
             "description": workflow_file.description,
+            "file_name": workflow_file.file_name,
             "node_count": len(workflow_file.nodes),
             "link_count": len(workflow_file.links),
             "invalid_links": [],
@@ -64,6 +67,8 @@ def build_workflow_multidigraph(
 
 
 def run_graph_checks(graph: nx.MultiDiGraph) -> dict[str, Any]:
+    fair_check = FairCheck(graph.graph["file_name"])
+
     results = [
         *get_cycles(graph),
         *get_input_output_type_mismatches(graph),
@@ -73,7 +78,8 @@ def run_graph_checks(graph: nx.MultiDiGraph) -> dict[str, Any]:
         *get_shared_configurations(graph),
         get_size(graph),
         get_longest_path(graph),
-        get_cnc(graph)
+        get_cnc(graph),
+        *fair_check.run_checks()
     ]
 
     return {

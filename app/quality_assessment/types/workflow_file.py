@@ -28,6 +28,7 @@ class WorkflowFile:
     title: str | None = None
     description: str | None = None
     virtual_lab: str | None = None
+    file_name: str | None = None
     nodes: list[WorkflowFileNode] = field(default_factory=list)
     links: list[WorkflowFileLink] = field(default_factory=list)
     raw_payload: dict[str, Any] = field(default_factory=dict)
