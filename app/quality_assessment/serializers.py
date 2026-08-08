@@ -4,6 +4,7 @@ from .models import *
 class AssessmentRunSerializer(serializers.ModelSerializer):
     # Add asset data type field
     asset_data = serializers.JSONField(write_only=True, required=False, default=dict)
+    fileName = serializers.CharField(write_only=True, required=True)
 
     # Uses AssessmentRun model fields
     class Meta:
@@ -14,6 +15,7 @@ class AssessmentRunSerializer(serializers.ModelSerializer):
             "asset_reference",
             "asset_type",
             "asset_data",
+            "fileName",
             "triggered_by",
             "requested_at",
             "started_at",
@@ -29,6 +31,7 @@ class AssessmentRunSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         self.asset_data = validated_data.pop("asset_data", {})
+        validated_data.pop("fileName", None)
         return super().create(validated_data)
 
 

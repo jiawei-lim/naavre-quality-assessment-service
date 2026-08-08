@@ -32,6 +32,7 @@ class AssessmentRunView(generics.GenericAPIView):
 
         #Validate Asset Type
         asset_type = serializer.validated_data["asset_type"]
+
         if asset_type not in self.supported_workflow_file_asset_types:
             raise ValidationError(
                 {
@@ -68,4 +69,5 @@ class AssessmentRunView(generics.GenericAPIView):
 
         payload = dict(asset_data)
         payload["id"] = payload.get("id") or validated_data.get("asset_id", "")
+        payload["fileName"] = validated_data.get("fileName", "")
         return payload
