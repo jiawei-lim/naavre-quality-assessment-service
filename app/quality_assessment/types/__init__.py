@@ -17,6 +17,7 @@ from quality_assessment.types.result_types import (
     GraphCheckLink,
     GraphCheckResult,
 )
+from quality_assessment.types.quality_dimensions import QualityDimension
 
 __all__ = [
     "BaseContainerImage",
@@ -32,4 +33,5 @@ __all__ = [
     "GraphCheckComponent",
     "GraphCheckLink",
     "GraphCheckResult",
+    "QualityDimension",
 ]

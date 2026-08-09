@@ -1,9 +1,10 @@
-from typing import Any
+from typing import Any, Collection
 
 import networkx as nx
 from ..code.code_check_service import *
 
 from quality_assessment.types import WorkflowFile
+from quality_assessment.types.quality_dimensions import QualityDimension
 from .graph_check_service import *
 from ..fair.fair_check_service import *
 
@@ -66,29 +67,34 @@ def build_workflow_multidigraph(
 
 
 
-def run_graph_checks(graph: nx.MultiDiGraph) -> dict[str, Any]:
-    fair_check = FairCheck(graph.graph["file_name"])
+def run_graph_checks(
+    graph: nx.MultiDiGraph,
+    dimensions: Collection[QualityDimension],
+) -> dict[str, Any]:
+    results = []
 
-    results = [
-        *get_cycles(graph),
-        *get_input_output_type_mismatches(graph),
-        *get_unfulfilled_inputs(graph),
-        *get_invalid_links(graph),
-        *get_specification_completeness(graph),
-        *get_shared_configurations(graph),
-        get_size(graph),
-        get_longest_path(graph),
-        get_cnc(graph),
-        *fair_check.run_checks()
-    ]
+    for dimension in QualityDimension:
+        if dimension not in dimensions:
+            continue
+        for check in GRAPH_CHECKS.get(dimension, []):
+            result = check(graph)
+            results += result if isinstance(result, list) else [result]
+
+    # Constructing FairCheck is what queries the metadata catalogue, so the guard
+    # has to cover the construction and not just the run_checks() call.
+    if QualityDimension.FAIR in dimensions:
+        results += FairCheck(graph.graph["file_name"]).run_checks()
 
     return {
         "graph_checks": serialize_graph_check_results(results),
     }
 
 
-def run_workflow_checks(graph: nx.MultiDiGraph) -> dict[str, Any]:
-    result = run_graph_checks(graph)
+def run_workflow_checks(
+    graph: nx.MultiDiGraph,
+    dimensions: Collection[QualityDimension],
+) -> dict[str, Any]:
+    result = run_graph_checks(graph, dimensions)
 
     try:
         result["semantic_checks"] = get_semantic_checks(graph)

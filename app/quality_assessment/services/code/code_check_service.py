@@ -6,7 +6,8 @@ import ast
 import re
 import textwrap
 from ...types.result_types import ValueCheckResult
-from typing import Any
+from ...types.quality_dimensions import QualityDimension
+from typing import Any, Collection
 from ...adapters.workflow_components import WorkflowComponent
 
 
@@ -16,17 +17,26 @@ THRESHOLDS = {
     "CC" : 25,
 }
 
-def run_code_checks(node:dict[str,Any],source_url:str) -> list[ValueCheckResult]:
+def run_code_checks(
+    node:dict[str,Any],
+    source_url:str,
+    dimensions:Collection[QualityDimension],
+) -> tuple[list[ValueCheckResult], ValueCheckResult | None]:
+    requiresMaintainability = QualityDimension.MAINTAINABILITY in dimensions
+    requiresUrl = QualityDimension.SUSTAINABILITY in dimensions
+    
+    if not (requiresMaintainability or requiresUrl):
+        return [], None
+
     source_code = get_raw_file(source_url)
-    raw_analysis = raw.analyze(source_code)
 
-    loc = get_loc(node,raw_analysis)
+    checks = []
+    if requiresMaintainability:
+        checks += [get_loc(node, raw.analyze(source_code)), get_cc(source_code)]
 
-    cc = get_cc(source_code)
+    urls = get_external_urls(source_code) if requiresUrl else None
 
-    urls = get_external_urls(source_code) 
-
-    return (loc, cc, urls)
+    return checks, urls
 
 def get_cc(code:str) -> ValueCheckResult:
     wrapped_code = _wrap_code(code)
@@ -34,7 +44,7 @@ def get_cc(code:str) -> ValueCheckResult:
 
     return ValueCheckResult(
         check_type = "cyclomatic_complexity",
-        quality_dimension = "maintainability",
+        quality_dimension = QualityDimension.MAINTAINABILITY,
         quality_subcharacteristic= "analyzability",
         message = "The cyclomatic complexity of the source code of the component",
         value = cc,
@@ -53,7 +63,7 @@ def get_loc(node:dict[str,Any],raw_analysis) -> ValueCheckResult:
 
     return ValueCheckResult(
         check_type = "loc",
-        quality_dimension = "maintainability",
+        quality_dimension = QualityDimension.MAINTAINABILITY,
         quality_subcharacteristic= "analyzability",
         message = "The count of source code lines of the component",
         value = loc,
@@ -63,7 +73,7 @@ def get_loc(node:dict[str,Any],raw_analysis) -> ValueCheckResult:
 def get_comment_density(raw_analysis) -> ValueCheckResult:
     return ValueCheckResult(
         check_type = "comment_density",
-        quality_dimension = "maintainability",
+        quality_dimension = QualityDimension.MAINTAINABILITY,
         quality_subcharacteristic= "analyzability",
         message = "Ratio of code comments to source code size",
         value = (raw_analysis.comments / raw_analysis.sloc)
@@ -89,7 +99,7 @@ def get_external_urls(code:str) -> ValueCheckResult:
 
     return ValueCheckResult(
         check_type = "external_service_dependency",
-        quality_dimension = "sustainability",
+        quality_dimension = QualityDimension.SUSTAINABILITY,
         message = "The number of distinct external URLs used by the component",
         value = urls
     )
