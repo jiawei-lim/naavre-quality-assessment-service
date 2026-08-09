@@ -34,7 +34,8 @@ class FairCheck:
             self.check_registered(),
             self.check_persistent_identifier(),
             self.check_rich_metadata(),
-            self.check_license()
+            self.check_license(),
+            self.check_retrievable()
         ]
 
     def check_persistent_identifier(self) -> ValueCheckResult:
@@ -56,8 +57,31 @@ class FairCheck:
                                         message = "Has persistent identifier i.e. DOI ",
                                         severity = "failed"
                                     )
-    def check_retrievable(self):
-        pass
+    def check_retrievable(self) -> ValueCheckResult:
+        root = etree.fromstring(self.iso_xml.encode())
+
+        links = root.xpath("//*[local-name()='linkage']//text() | //*[local-name()='URL']/text()")
+        links = [l.strip() for l in links if l.strip().startswith("http")]
+        links = [l for l in links if "naavre" in l.lower()]
+
+        result = map(self._resolves,links)
+        if all(result):
+            return ValueCheckResult(
+                            check_type = "a1_persistent",
+                            quality_dimension = "FAIR",
+                            quality_subcharacteristic= "Accessibility",
+                            message = "Retrivable via identifiers",
+                            severity = "passed"
+                        )
+        else:
+            return ValueCheckResult(
+                            check_type = "a1_persistent",
+                            quality_dimension = "FAIR",
+                            quality_subcharacteristic= "Accessibility",
+                            message = "Retrivable via identifiers",
+                            severity = "failed"
+                        )
+
 
     def check_rich_metadata(self) -> ValueCheckResult:
         RICH_FIELDS = ["title", "abstract", "subjects", "creator", "publisher","date", "type", "language", "rights", "relation"]
@@ -95,6 +119,9 @@ class FairCheck:
                 severity = "failed"
             )
 
+    def check_component_license(self) -> ValueCheckResult:
+        pass
+
     def _set_iso_xml(self):
         self.csw.getrecordbyid(id=[self.uuid], outputschema=self.ISO)
         rec = self.csw.records.get(self.uuid)
@@ -127,6 +154,15 @@ class FairCheck:
                 message = "Registered or indexed in a searchable FAIR resource",
                 severity = "failed"
             )
+
+    def _resolves(self, url:str):
+        try:
+            r = requests.head(url, allow_redirects=True, timeout=10)
+            if r.status_code in (403, 405):   
+                r = requests.get(url, stream=True, timeout=10)
+            return r.status_code == 200
+        except requests.RequestException:
+            return None
 
     def _field_values(self,rec, name):
         """Read a CswRecord field as a list (some are scalars, some are lists)."""
