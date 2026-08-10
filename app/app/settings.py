@@ -26,6 +26,12 @@ def env_int(name, default):
 def env_float(name, default):
     return float(os.environ.get(name, default))
 
+def env_bool(name, default):
+    return os.environ.get(name, default).strip().lower() in ("1", "true", "yes")
+
+
+def env_list(name, default):
+    return [v.strip() for v in os.environ.get(name, default).split(",") if v.strip()]
 
 load_dotenv(BASE_DIR.parent / ".env")
 
@@ -34,12 +40,11 @@ load_dotenv(BASE_DIR.parent / ".env")
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-q*9e(rqyqp^15oa6v6w4a-64ddch2bga(^mxc!dd1*wxnvx8fe'
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "django-insecure-q*9e(rqyqp^15oa6v6w4a-64ddch2bga(^mxc!dd1*wxnvx8fe")
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = env_bool("DJANGO_DEBUG", "True")
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1,[::1]")
 
 
 # Application definition
