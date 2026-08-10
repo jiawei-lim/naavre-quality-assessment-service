@@ -1,5 +1,6 @@
 from .metadata_catalogue_client import *
 from ...types.result_types import *
+from ...types.quality_dimensions import QualityDimension
 from dataclasses import dataclass
 from owslib.csw import CatalogueServiceWeb
 import functools
@@ -18,7 +19,7 @@ class FairCheckMeta:
     def result(self, severity: str, value=None) -> ValueCheckResult:
         return ValueCheckResult(
             check_type = self.check_type,
-            quality_dimension = "FAIR",
+            quality_dimension = QualityDimension.FAIR,
             quality_subcharacteristic = self.quality_subcharacteristic,
             message = self.message,
             severity = severity,
