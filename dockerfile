@@ -12,4 +12,4 @@ COPY app/ .
 
 EXPOSE 8001
 
-CMD ["sh", "-c", "python manage.py migrate --noinput && exec gunicorn app.wsgi:application --bind 0.0.0.0:8001"]
+CMD ["sh", "-c", "python manage.py migrate --noinput && exec gunicorn app.wsgi:application --bind 0.0.0.0:8001 --workers 2 --threads 8 --timeout 500"]
