@@ -139,6 +139,17 @@ def get_default_value_completeness(node:dict[str,Any]) -> ValueCheckResult:
 def get_external_service_dependency(node:dict[str,Any],urls:ValueCheckResult | None = None) -> ValueCheckResult:
     component = node.get("component")
     secrets = component.secrets
+
+    if urls and urls.severity == "warning":
+        return ValueCheckResult(
+            check_type = "external_service_dependency",
+            quality_dimension = QualityDimension.SUSTAINABILITY,
+            quality_subcharacteristic= None,
+            message = "External service dependencies could not be determined",
+            value = urls.value,
+            severity = "warning"
+        )
+
     external_urls = urls.value if urls else []
 
     if len(secrets) > 0 or len(external_urls) > 0:

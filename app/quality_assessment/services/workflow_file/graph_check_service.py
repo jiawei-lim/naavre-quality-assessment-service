@@ -15,7 +15,8 @@ from ...types.workflow_components import WorkflowComponent
 
 THRESHOLDS = {
     "WORKFLOW_SIZE" : 31,
-    "CNC": 3
+    "CNC": 3,
+    "LONGEST_PATH" : 15
 }
 
 def get_size(graph: nx.MultiDiGraph) -> ValueCheckResult:
@@ -36,7 +37,8 @@ def get_longest_path(graph: nx.MultiDiGraph) -> ValueCheckResult:
                 quality_dimension = QualityDimension.MAINTAINABILITY,
                 quality_subcharacteristic= "analyzability",
                 message = "Longest path of the workflow",
-                value = nx.dag_longest_path_length(graph)
+                value = nx.dag_longest_path_length(graph),
+                severity = "failed" if nx.dag_longest_path_length(graph) >= THRESHOLDS["LONGEST_PATH"] else "passed"
             )
     except:
         return ValueCheckResult(
