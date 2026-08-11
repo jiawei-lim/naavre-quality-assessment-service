@@ -28,7 +28,7 @@ class GraphCheckLink:
 
 @dataclass(frozen=True)
 class ValueCheckResult(BaseCheck):
-    value: float | int | list[Any] = None
+    value: float | int | str | list[Any] | None = None
 
 @dataclass(frozen=True)
 class GraphCheckResult(BaseCheck):
