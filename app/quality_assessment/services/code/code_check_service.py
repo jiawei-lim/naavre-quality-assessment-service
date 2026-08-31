@@ -1,4 +1,4 @@
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 
 from radon import complexity, raw
 from .github_client_service import get_raw_file
@@ -7,7 +7,7 @@ import re
 import textwrap
 from ...types.result_types import BaseCheck
 from ...types.quality_dimensions import QualityDimension
-from typing import Any, Callable, Collection
+from typing import Any, Callable
 from ...adapters.workflow_components import WorkflowComponent
 
 
@@ -16,6 +16,22 @@ THRESHOLDS = {
     "LOC" : 60,
     "CC" : 25,
 }
+
+
+@dataclass(frozen=True)
+class ComponentSource:
+    code: str | None = None
+    error: str | None = None
+
+
+def fetch_source(source_url: str | None) -> ComponentSource:
+    if not source_url:
+        return ComponentSource()
+
+    try:
+        return ComponentSource(code = get_raw_file(source_url + "/task.py"))
+    except Exception:
+        return ComponentSource(error = "Source code could not be retrieved")
 
 
 @dataclass(frozen=True)
@@ -54,55 +70,48 @@ CC = CodeCheckMeta(
     message = "The cyclomatic complexity of the source code of the component",
 )
 
-EXTERNAL_URLS = CodeCheckMeta(
-    check_type = "external_service_dependency",
-    quality_dimension = QualityDimension.SUSTAINABILITY,
-    message = "The number of distinct external URLs used by the component",
-)
 
+def get_loc(node:dict[str,Any], source:ComponentSource) -> BaseCheck | None:
+    return _from_source(LOC, source, lambda code: _loc(node, code))
 
-def run_code_checks(
-    node:dict[str,Any],
-    source_url:str,
-    dimensions:Collection[QualityDimension],
-) -> tuple[list[BaseCheck], BaseCheck | None]:
-    requiresMaintainability = QualityDimension.MAINTAINABILITY in dimensions
-    requiresUrl = QualityDimension.SUSTAINABILITY in dimensions
+def get_cc(source:ComponentSource) -> BaseCheck | None:
+    return _from_source(CC, source, _cc)
 
-    if not (requiresMaintainability or requiresUrl):
-        return [], None
-
-    # Components written in another language have no task.py to fetch. Degrade the
-    # code checks to warnings instead of failing the whole assessment.
-    try:
-        source_code = get_raw_file(source_url)
-    except Exception as error:
-        reason = f"Source code could not be retrieved"
-        checks = [LOC.unavailable(reason), CC.unavailable(reason)] if requiresMaintainability else []
-        return checks, (EXTERNAL_URLS.unavailable(reason) if requiresUrl else None)
-
-    checks = []
-    if requiresMaintainability:
-        checks += [
-            _safe(LOC, lambda: get_loc(node, raw.analyze(source_code))),
-            _safe(CC, lambda: get_cc(source_code)),
-        ]
-
-    urls = _safe(EXTERNAL_URLS, lambda: get_external_urls(source_code)) if requiresUrl else None
-
-    return checks, urls
-
-def get_cc(code:str) -> BaseCheck:
-    wrapped_code = _wrap_code(code)
-    cc = complexity.cc_visit(wrapped_code)[0].complexity
-
-    return CC.result(
-        "failed" if cc > THRESHOLDS["CC"] else "passed",
-        value = cc
+def get_comment_density(code:str) -> BaseCheck:
+    raw_analysis = raw.analyze(code)
+    return BaseCheck(
+        check_type = "comment_density",
+        quality_dimension = QualityDimension.MAINTAINABILITY,
+        quality_subcharacteristic= "analyzability",
+        message = "Ratio of code comments to source code size",
+        value = (raw_analysis.comments / raw_analysis.sloc)
     )
 
-def get_loc(node:dict[str,Any],raw_analysis) -> BaseCheck:
-    loc = raw_analysis.sloc
+def get_external_urls(code:str) -> list[str]:
+    tree = ast.parse(code)
+
+    docstrings = {
+        id(node.value)
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Expr) and isinstance(node.value, ast.Constant)
+    }
+
+    return [
+        url
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Constant)
+        and isinstance(node.value, str)
+        and id(node) not in docstrings
+        for url in _URL_PATTERN.findall(node.value)
+    ]
+
+
+##################################
+#        HELPER METHODS          #
+##################################
+
+def _loc(node:dict[str,Any], code:str) -> BaseCheck:
+    loc = raw.analyze(code).sloc
 
     component: WorkflowComponent = node.get("component")
     template_code_length = 8 + len(component.inputs) + len(component.parameters) + len(component.configurations) + (3 * len(component.outputs))
@@ -116,34 +125,27 @@ def get_loc(node:dict[str,Any],raw_analysis) -> BaseCheck:
         value = loc
     )
 
-def get_comment_density(raw_analysis) -> BaseCheck:
-    return BaseCheck(
-        check_type = "comment_density",
-        quality_dimension = QualityDimension.MAINTAINABILITY,
-        quality_subcharacteristic= "analyzability",
-        message = "Ratio of code comments to source code size",
-        value = (raw_analysis.comments / raw_analysis.sloc)
+def _cc(code:str) -> BaseCheck:
+    wrapped_code = _wrap_code(code)
+    cc = complexity.cc_visit(wrapped_code)[0].complexity
+
+    return CC.result(
+        "failed" if cc > THRESHOLDS["CC"] else "passed",
+        value = cc
     )
 
-def get_external_urls(code:str) -> BaseCheck:
-    tree = ast.parse(code)
+def _from_source(
+    meta:CodeCheckMeta,
+    source:ComponentSource,
+    check:Callable[[str], BaseCheck],
+) -> BaseCheck | None:
+    if source.error:
+        return meta.unavailable(source.error)
 
-    docstrings = {
-        id(node.value)
-        for node in ast.walk(tree)
-        if isinstance(node, ast.Expr) and isinstance(node.value, ast.Constant)
-    }
+    if source.code is None:
+        return None
 
-    urls = [
-        url
-        for node in ast.walk(tree)
-        if isinstance(node, ast.Constant)
-        and isinstance(node.value, str)
-        and id(node) not in docstrings
-        for url in _URL_PATTERN.findall(node.value)
-    ]
-
-    return EXTERNAL_URLS.result(None, value = urls)
+    return _safe(meta, lambda: check(source.code))
 
 def _safe(meta:CodeCheckMeta, check:Callable[[], BaseCheck]) -> BaseCheck:
     """Run a check, degrading it to a warning when the source cannot be analyzed."""

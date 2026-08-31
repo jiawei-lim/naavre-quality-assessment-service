@@ -106,7 +106,7 @@ class FairCheck:
 
     @fair_check("r1.1_license", "Reusability", "Has a clear and accessible license")
     def check_license(self, meta) -> BaseCheck:
-        license_id = self._match_license(self.iso_xml)
+        license_id = self._match_license(self._use_limitations(self.iso_xml))
         if license_id:
             return meta.result("passed", value = license_id)
         else:
@@ -118,11 +118,18 @@ class FairCheck:
         results = []
         for name, uuid in services:
             component_xml = self._get_component_iso_xml(uuid)
-            license_id = self._match_license(component_xml) if component_xml else None
+            license_id = self._match_license(self._use_limitations(component_xml)) if component_xml else None
             results.append({"service": name, "uuid": uuid, "license": license_id})
 
         all_licensed = bool(results) and all(r["license"] for r in results)
         return meta.result("passed" if all_licensed else "failed", value = results)
+
+    def _use_limitations(self, xml: str) -> str:
+        root = etree.fromstring(xml.encode())
+        return " ".join(
+            self._clean("".join(node.itertext()))
+            for node in root.xpath("//*[local-name()='useLimitation']")
+        )
 
     def _match_license(self, text: str) -> str | None:
         for lic_id in self.SPDX_IDS:
