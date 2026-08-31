@@ -159,17 +159,4 @@ SPECTACULAR_SETTINGS = {
     # OTHER SETTINGS
 }
 
-
-LLM_PROVIDER = os.getenv("LLM_PROVIDER", "openrouter")
-LLM_API_KEY = os.getenv("OPENROUTER_API_KEY") or os.getenv("LLM_API_KEY", "")
-OPENROUTER_HTTP_REFERER = os.getenv("OPENROUTER_HTTP_REFERER", "")
-OPENROUTER_APP_TITLE = os.getenv(
-    "OPENROUTER_APP_TITLE",
-    "NaaVRE Quality Assessment Service",
-)
-LLM_MODEL = os.getenv("LLM_MODEL", "~openai/gpt-latest")
-LLM_TIMEOUT_SECONDS = env_int("LLM_TIMEOUT_SECONDS", 60)
-LLM_MAX_TOKENS = env_int("LLM_MAX_TOKENS", 4096)
-LLM_TEMPERATURE = env_float("LLM_TEMPERATURE", 0.0)
-LLM_TOP_P = env_float("LLM_TOP_P", 1.0)
 GITHUB_PAT = os.getenv("GITHUB_PAT")

@@ -8,7 +8,7 @@ from ...types.result_types import (
     GraphCheckComponent,
     GraphCheckLink,
     GraphCheckResult,
-    ValueCheckResult
+    BaseCheck
 )
 from ...types.quality_dimensions import QualityDimension
 from ...types.workflow_components import WorkflowComponent
@@ -20,9 +20,9 @@ THRESHOLDS = {
     "LONGEST_PATH" : 15
 }
 
-def get_size(graph: nx.MultiDiGraph) -> ValueCheckResult:
+def get_size(graph: nx.MultiDiGraph) -> BaseCheck:
     size = len(graph.nodes)
-    return ValueCheckResult(
+    return BaseCheck(
             check_type = "workflow_size",
             quality_dimension = QualityDimension.MAINTAINABILITY,
             quality_subcharacteristic= "analyzability",
@@ -31,9 +31,9 @@ def get_size(graph: nx.MultiDiGraph) -> ValueCheckResult:
             severity = "passed" if size <= THRESHOLDS["WORKFLOW_SIZE"] else "failed"
         )
 
-def get_longest_path(graph: nx.MultiDiGraph) -> ValueCheckResult:
+def get_longest_path(graph: nx.MultiDiGraph) -> BaseCheck:
     try:
-        return ValueCheckResult(
+        return BaseCheck(
                 check_type = "workflow_longest_path",
                 quality_dimension = QualityDimension.MAINTAINABILITY,
                 quality_subcharacteristic= "analyzability",
@@ -42,7 +42,7 @@ def get_longest_path(graph: nx.MultiDiGraph) -> ValueCheckResult:
                 severity = "failed" if nx.dag_longest_path_length(graph) >= THRESHOLDS["LONGEST_PATH"] else "passed"
             )
     except:
-        return ValueCheckResult(
+        return BaseCheck(
                 check_type = "workflow_longest_path",
                 quality_dimension = QualityDimension.MAINTAINABILITY,
                 quality_subcharacteristic= "analyzability",
@@ -51,9 +51,9 @@ def get_longest_path(graph: nx.MultiDiGraph) -> ValueCheckResult:
             )
 
 
-def get_cnc(graph: nx.MultiDiGraph) -> ValueCheckResult:
+def get_cnc(graph: nx.MultiDiGraph) -> BaseCheck:
     cnc  = round(len(graph.edges) / len(graph.nodes),2)
-    return ValueCheckResult(
+    return BaseCheck(
             check_type = "workflow_cnc",
             quality_dimension = QualityDimension.MAINTAINABILITY,
             quality_subcharacteristic= "analyzability",
@@ -303,7 +303,7 @@ def get_shared_configurations(graph: nx.MultiDiGraph) -> list[GraphCheckResult]:
     ]
 
 
-def run_fair_checks(graph: nx.MultiDiGraph) -> list[ValueCheckResult]:
+def run_fair_checks(graph: nx.MultiDiGraph) -> list[BaseCheck]:
     # Constructing FairCheck is what queries the metadata catalogue, so this is
     # only reached when the FAIR dimension was actually requested.
     return FairCheck(graph.graph["file_name"]).run_checks()

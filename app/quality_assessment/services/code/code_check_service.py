@@ -5,7 +5,7 @@ from .github_client_service import get_raw_file
 import ast
 import re
 import textwrap
-from ...types.result_types import ValueCheckResult
+from ...types.result_types import BaseCheck
 from ...types.quality_dimensions import QualityDimension
 from typing import Any, Callable, Collection
 from ...adapters.workflow_components import WorkflowComponent
@@ -26,8 +26,8 @@ class CodeCheckMeta:
     message: str
     quality_subcharacteristic: str | None = None
 
-    def result(self, severity: str, value = None) -> ValueCheckResult:
-        return ValueCheckResult(
+    def result(self, severity: str, value = None) -> BaseCheck:
+        return BaseCheck(
             check_type = self.check_type,
             quality_dimension = self.quality_dimension,
             quality_subcharacteristic = self.quality_subcharacteristic,
@@ -36,7 +36,7 @@ class CodeCheckMeta:
             value = value
         )
 
-    def unavailable(self, reason: str) -> ValueCheckResult:
+    def unavailable(self, reason: str) -> BaseCheck:
         return self.result("warning", reason)
 
 
@@ -65,7 +65,7 @@ def run_code_checks(
     node:dict[str,Any],
     source_url:str,
     dimensions:Collection[QualityDimension],
-) -> tuple[list[ValueCheckResult], ValueCheckResult | None]:
+) -> tuple[list[BaseCheck], BaseCheck | None]:
     requiresMaintainability = QualityDimension.MAINTAINABILITY in dimensions
     requiresUrl = QualityDimension.SUSTAINABILITY in dimensions
 
@@ -92,7 +92,7 @@ def run_code_checks(
 
     return checks, urls
 
-def get_cc(code:str) -> ValueCheckResult:
+def get_cc(code:str) -> BaseCheck:
     wrapped_code = _wrap_code(code)
     cc = complexity.cc_visit(wrapped_code)[0].complexity
 
@@ -101,7 +101,7 @@ def get_cc(code:str) -> ValueCheckResult:
         value = cc
     )
 
-def get_loc(node:dict[str,Any],raw_analysis) -> ValueCheckResult:
+def get_loc(node:dict[str,Any],raw_analysis) -> BaseCheck:
     loc = raw_analysis.sloc
 
     component: WorkflowComponent = node.get("component")
@@ -116,8 +116,8 @@ def get_loc(node:dict[str,Any],raw_analysis) -> ValueCheckResult:
         value = loc
     )
 
-def get_comment_density(raw_analysis) -> ValueCheckResult:
-    return ValueCheckResult(
+def get_comment_density(raw_analysis) -> BaseCheck:
+    return BaseCheck(
         check_type = "comment_density",
         quality_dimension = QualityDimension.MAINTAINABILITY,
         quality_subcharacteristic= "analyzability",
@@ -125,7 +125,7 @@ def get_comment_density(raw_analysis) -> ValueCheckResult:
         value = (raw_analysis.comments / raw_analysis.sloc)
     )
 
-def get_external_urls(code:str) -> ValueCheckResult:
+def get_external_urls(code:str) -> BaseCheck:
     tree = ast.parse(code)
 
     docstrings = {
@@ -145,7 +145,7 @@ def get_external_urls(code:str) -> ValueCheckResult:
 
     return EXTERNAL_URLS.result(None, value = urls)
 
-def _safe(meta:CodeCheckMeta, check:Callable[[], ValueCheckResult]) -> ValueCheckResult:
+def _safe(meta:CodeCheckMeta, check:Callable[[], BaseCheck]) -> BaseCheck:
     """Run a check, degrading it to a warning when the source cannot be analyzed."""
     try:
         return check()

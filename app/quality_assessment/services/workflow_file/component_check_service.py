@@ -3,7 +3,7 @@ from dataclasses import asdict, dataclass
 import networkx as nx
 from typing import Any, Callable, Collection
 from ..code.code_check_service import *
-from ...types.result_types import ValueCheckResult, ComponentCheckResult
+from ...types.result_types import BaseCheck, ComponentCheckResult
 from ...types.quality_dimensions import QualityDimension
 from ...adapters.workflow_components import WorkflowComponent
 
@@ -19,7 +19,7 @@ class ComponentContext:
     graph: nx.MultiDiGraph
     node_id: str
     node_data: dict[str, Any]
-    external_urls: ValueCheckResult | None = None
+    external_urls: BaseCheck | None = None
 
 
 def run_component_checks(
@@ -67,9 +67,9 @@ def run_component_checks(
         "component_checks": [asdict(result) for result in component_check_results],
     }
 
-def get_fan_in(graph:nx.MultiDiGraph, node_id:str) -> ValueCheckResult:
+def get_fan_in(graph:nx.MultiDiGraph, node_id:str) -> BaseCheck:
     fan_in = len(set(graph.predecessors(node_id)))
-    return ValueCheckResult(
+    return BaseCheck(
             check_type = "fan_in",
             quality_dimension = QualityDimension.MAINTAINABILITY,
             quality_subcharacteristic= "modularity",
@@ -78,9 +78,9 @@ def get_fan_in(graph:nx.MultiDiGraph, node_id:str) -> ValueCheckResult:
             severity = "failed" if fan_in >= THRESHOLDS["FAN_IN"] else "passed"
         )
 
-def get_fan_out(graph:nx.MultiDiGraph, node_id:str) -> ValueCheckResult:
+def get_fan_out(graph:nx.MultiDiGraph, node_id:str) -> BaseCheck:
     fan_out = len(set(graph.successors(node_id)))
-    return ValueCheckResult(
+    return BaseCheck(
             check_type = "fan_out",
             quality_dimension = QualityDimension.MAINTAINABILITY,
             quality_subcharacteristic= "modularity",
@@ -89,10 +89,10 @@ def get_fan_out(graph:nx.MultiDiGraph, node_id:str) -> ValueCheckResult:
             severity = "failed" if fan_out >= THRESHOLDS["FAN_OUT"] else "passed"
         )
 
-def get_hardcoded_configurations(node:dict[str,Any]) -> ValueCheckResult:
+def get_hardcoded_configurations(node:dict[str,Any]) -> BaseCheck:
     component = node.get("component")
     confs = component.configurations
-    return ValueCheckResult(
+    return BaseCheck(
             check_type = "hardcoded_configurations",
             quality_dimension = QualityDimension.MAINTAINABILITY,
             quality_subcharacteristic= "reusability",
@@ -100,11 +100,11 @@ def get_hardcoded_configurations(node:dict[str,Any]) -> ValueCheckResult:
             value = confs
         )
 
-def get_interface_size(node:dict[str,Any]) -> ValueCheckResult:
+def get_interface_size(node:dict[str,Any]) -> BaseCheck:
     component:WorkflowComponent = node.get("component")
     inputs = len(component.inputs)
     parameters = len(component.parameters)
-    return ValueCheckResult(
+    return BaseCheck(
         check_type = "interface_size",
         quality_dimension = QualityDimension.MAINTAINABILITY,
         quality_subcharacteristic= "modularity",
@@ -113,13 +113,13 @@ def get_interface_size(node:dict[str,Any]) -> ValueCheckResult:
         severity = "failed" if (inputs + parameters) > THRESHOLDS["INTERFACE_SIZE"] else "passed"
     )
 
-def get_default_value_completeness(node:dict[str,Any]) -> ValueCheckResult:
+def get_default_value_completeness(node:dict[str,Any]) -> BaseCheck:
     component = node.get("component")
     parameters = component.parameters
     if len(parameters) > 0 :
         parameters_no_default = [param for param in parameters if not param.default_value]
         if len(parameters_no_default) > 0:
-            return ValueCheckResult(
+            return BaseCheck(
                 check_type = "default_value_completeness",
                 quality_dimension = QualityDimension.SUSTAINABILITY,
                 quality_subcharacteristic= None,
@@ -128,7 +128,7 @@ def get_default_value_completeness(node:dict[str,Any]) -> ValueCheckResult:
                 value = parameters_no_default,
             )
 
-    return ValueCheckResult(
+    return BaseCheck(
             check_type = "default_value_completeness",
             quality_dimension = QualityDimension.SUSTAINABILITY,
             quality_subcharacteristic= None,
@@ -136,12 +136,12 @@ def get_default_value_completeness(node:dict[str,Any]) -> ValueCheckResult:
             severity = "passed"
         )
 
-def get_external_service_dependency(node:dict[str,Any],urls:ValueCheckResult | None = None) -> ValueCheckResult:
+def get_external_service_dependency(node:dict[str,Any],urls:BaseCheck | None = None) -> BaseCheck:
     component = node.get("component")
     secrets = component.secrets
 
     if urls and urls.severity == "warning":
-        return ValueCheckResult(
+        return BaseCheck(
             check_type = "external_service_dependency",
             quality_dimension = QualityDimension.SUSTAINABILITY,
             quality_subcharacteristic= None,
@@ -153,7 +153,7 @@ def get_external_service_dependency(node:dict[str,Any],urls:ValueCheckResult | N
     external_urls = urls.value if urls else []
 
     if len(secrets) > 0 or len(external_urls) > 0:
-        return ValueCheckResult(
+        return BaseCheck(
             check_type = "external_service_dependency",
             quality_dimension = QualityDimension.SUSTAINABILITY,
             quality_subcharacteristic= None,
@@ -162,7 +162,7 @@ def get_external_service_dependency(node:dict[str,Any],urls:ValueCheckResult | N
             severity = "warning"
         )
 
-    return ValueCheckResult(
+    return BaseCheck(
             check_type = "external_service_dependency",
             quality_dimension = QualityDimension.SUSTAINABILITY,
             quality_subcharacteristic= None,
@@ -173,7 +173,7 @@ def get_external_service_dependency(node:dict[str,Any],urls:ValueCheckResult | N
 
 # The per-component checks belonging to each quality dimension. They are bound
 # through ComponentContext so the registry can call them uniformly.
-COMPONENT_CHECKS: dict[QualityDimension, list[Callable[[ComponentContext], ValueCheckResult]]] = {
+COMPONENT_CHECKS: dict[QualityDimension, list[Callable[[ComponentContext], BaseCheck]]] = {
     QualityDimension.MAINTAINABILITY: [
         lambda ctx: get_hardcoded_configurations(ctx.node_data),
         lambda ctx: get_fan_in(ctx.graph, ctx.node_id),

@@ -16,8 +16,8 @@ class FairCheckMeta:
     quality_subcharacteristic: str
     message: str
 
-    def result(self, severity: str, value=None) -> ValueCheckResult:
-        return ValueCheckResult(
+    def result(self, severity: str, value=None) -> BaseCheck:
+        return BaseCheck(
             check_type = self.check_type,
             quality_dimension = QualityDimension.FAIR,
             quality_subcharacteristic = self.quality_subcharacteristic,
@@ -32,7 +32,7 @@ def fair_check(check_type: str, quality_subcharacteristic: str, message: str):
         meta = FairCheckMeta(check_type, quality_subcharacteristic, message)
 
         @functools.wraps(fn)
-        def wrapper(self) -> ValueCheckResult:
+        def wrapper(self) -> BaseCheck:
             if not self._valid_record_exists():
                 return meta.result("failed", value = self._unavailable_reason)
             return fn(self, meta)
@@ -66,7 +66,7 @@ class FairCheck:
             self._set_dc_record()
             self._set_iso_xml()
 
-    def run_checks(self) -> list[ValueCheckResult]:
+    def run_checks(self) -> list[BaseCheck]:
         return [
             getattr(self, name)()
             for name, attr in vars(type(self)).items()
@@ -74,17 +74,17 @@ class FairCheck:
         ]
 
     @fair_check("f4_registered", "Findability", "Registered or indexed in a searchable FAIR resource")
-    def check_registered(self, meta) -> ValueCheckResult:
+    def check_registered(self, meta) -> BaseCheck:
         return meta.result("passed")
 
     @fair_check("f1_persistent", "Findability", "Has persistent identifier (PID)")
-    def check_persistent_identifier(self, meta) -> ValueCheckResult:
+    def check_persistent_identifier(self, meta) -> BaseCheck:
         ids = self._field_values(self.dc_record, "identifier")
         persistent = [i for i in ids if self.PID.match(i)]
         return meta.result("passed" if persistent else "failed")
 
     @fair_check("a1_persistent", "Accessibility", "Retrivable via identifiers")
-    def check_retrievable(self, meta) -> ValueCheckResult:
+    def check_retrievable(self, meta) -> BaseCheck:
         root = etree.fromstring(self.iso_xml.encode())
 
         links = root.xpath("//*[local-name()='linkage']//text() | //*[local-name()='URL']/text()")
@@ -95,7 +95,7 @@ class FairCheck:
         return meta.result("passed" if all(result) else "failed")
 
     @fair_check("f2_rich", "Findability", "Has rich metadata")
-    def check_rich_metadata(self, meta) -> ValueCheckResult:
+    def check_rich_metadata(self, meta) -> BaseCheck:
         RICH_FIELDS = ["title", "abstract", "subjects", "creator", "publisher","date", "type", "language", "rights", "relation"]
         result = [f for f in RICH_FIELDS if self._field_values(self.dc_record, f)]
 
@@ -105,7 +105,7 @@ class FairCheck:
         )
 
     @fair_check("r1.1_license", "Reusability", "Has a clear and accessible license")
-    def check_license(self, meta) -> ValueCheckResult:
+    def check_license(self, meta) -> BaseCheck:
         license_id = self._match_license(self.iso_xml)
         if license_id:
             return meta.result("passed", value = license_id)
@@ -113,7 +113,7 @@ class FairCheck:
             return meta.result("failed")
 
     @fair_check("r1.1_component_license", "Reusability", "All workflow components have a clear and accessible license")
-    def check_component_license(self, meta) -> ValueCheckResult:
+    def check_component_license(self, meta) -> BaseCheck:
         services = self._extract_component_services()
         results = []
         for name, uuid in services:

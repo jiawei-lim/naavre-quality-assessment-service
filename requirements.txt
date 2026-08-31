@@ -2,7 +2,6 @@ Django == 6.0.6
 djangorestframework == 3.17
 drf-spectacular == 0.29.0
 networkx == 3.6.1
-openrouter == 0.10.5
 python-dotenv == 1.1.1
 PyGithub == 2.9.1
 radon == 6.0.1
