@@ -1,8 +1,9 @@
 from dataclasses import asdict
-from typing import Any, Callable
+from typing import Any, Callable, Collection
 
 import networkx as nx
 
+from ..fair.fair_check_service import FairCheck
 from ...types.result_types import (
     GraphCheckComponent,
     GraphCheckLink,
@@ -51,7 +52,7 @@ def get_longest_path(graph: nx.MultiDiGraph) -> ValueCheckResult:
 
 
 def get_cnc(graph: nx.MultiDiGraph) -> ValueCheckResult:
-    cnc  = round(len(graph.nodes) / len(graph.edges),2)
+    cnc  = round(len(graph.edges) / len(graph.nodes),2)
     return ValueCheckResult(
             check_type = "workflow_cnc",
             quality_dimension = QualityDimension.MAINTAINABILITY,
@@ -302,6 +303,12 @@ def get_shared_configurations(graph: nx.MultiDiGraph) -> list[GraphCheckResult]:
     ]
 
 
+def run_fair_checks(graph: nx.MultiDiGraph) -> list[ValueCheckResult]:
+    # Constructing FairCheck is what queries the metadata catalogue, so this is
+    # only reached when the FAIR dimension was actually requested.
+    return FairCheck(graph.graph["file_name"]).run_checks()
+
+
 def serialize_graph_check_results(
     results: list[GraphCheckResult],
 ) -> list[dict]:
@@ -324,7 +331,29 @@ GRAPH_CHECKS: dict[QualityDimension, list[Callable[[nx.MultiDiGraph], Any]]] = {
         get_longest_path,
         get_cnc,
     ],
+    QualityDimension.FAIR: [
+        run_fair_checks,
+    ],
 }
+
+
+def run_graph_checks(
+    graph: nx.MultiDiGraph,
+    dimensions: Collection[QualityDimension],
+) -> dict[str, Any]:
+    results = []
+
+    for dimension in QualityDimension:
+        if dimension not in dimensions:
+            continue
+        for check in GRAPH_CHECKS.get(dimension, []):
+            result = check(graph)
+            results += result if isinstance(result, list) else [result]
+
+    return {
+        "graph_checks": serialize_graph_check_results(results),
+    }
+
 
 ##################################
 #        HELPER METHODS          #

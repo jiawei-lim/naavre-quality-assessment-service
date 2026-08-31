@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from .adapters import WorkflowFileAdapter
 from .models import *
 from .serializers import *
-from .services.workflow_file import workflow_file_service
+from .services.workflow_file import workflow_graph_builder
 from .services import metrics_service
 from .types.quality_dimensions import QualityDimension
 
@@ -52,7 +52,7 @@ class AssessmentRunView(generics.GenericAPIView):
         )
 
         #Build workflow file from .naavrewf JSON into networkx graph
-        graph = workflow_file_service.build_workflow_multidigraph(workflow_file)
+        graph = workflow_graph_builder.build_workflow_multidigraph(workflow_file)
 
         #Run checks, restricted to the requested quality dimensions
         dimensions = frozenset(

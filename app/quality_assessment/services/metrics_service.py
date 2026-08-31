@@ -1,4 +1,4 @@
-from .workflow_file.workflow_file_service import run_graph_checks
+from .workflow_file.workflow_check_service import run_graph_checks
 from .workflow_file.component_check_service import run_component_checks
 from ..types.quality_dimensions import QualityDimension
 import networkx as nx
