@@ -1,5 +1,5 @@
 import networkx as nx
-from networkx.exception import NetworkXNotImplemented
+from networkx.exception import NetworkXUnfeasible
 
 from ..fair.fair_check_service import FairCheck
 from ...types.result_types import (
@@ -40,7 +40,7 @@ def get_longest_path(graph: nx.MultiDiGraph) -> BaseCheck:
                 value = value,
                 severity = "failed" if value >= THRESHOLDS["LONGEST_PATH"] else "passed"
             )
-    except NetworkXNotImplemented:
+    except NetworkXUnfeasible:
         return BaseCheck(
                 check_type = "workflow_longest_path",
                 quality_dimension = QualityDimension.MAINTAINABILITY,
