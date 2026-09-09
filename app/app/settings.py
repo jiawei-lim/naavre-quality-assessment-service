@@ -142,6 +142,11 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+BASE_PATH = os.environ.get('BASE_PATH', '').strip('/')
+if BASE_PATH:
+    FORCE_SCRIPT_NAME = f'/{BASE_PATH}'
+    STATIC_URL = f'/{BASE_PATH}/static/'
+
 
 REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': [
