@@ -8,6 +8,7 @@ class BaseCheck:
     message: str
     quality_subcharacteristic:str | None = None
     severity: Literal["warning", "failed", "passed"] | None = None
+    value: float | int | str | list[Any] | None = None
 
 
 @dataclass(frozen=True)
@@ -27,10 +28,6 @@ class GraphCheckLink:
     to_port_name: str | None = None
 
 @dataclass(frozen=True)
-class ValueCheckResult(BaseCheck):
-    value: float | int | str | list[Any] | None = None
-
-@dataclass(frozen=True)
 class GraphCheckResult(BaseCheck):
     components: list[GraphCheckComponent] = field(default_factory=list)
     links: list[GraphCheckLink] = field(default_factory=list)
@@ -39,4 +36,4 @@ class GraphCheckResult(BaseCheck):
 
 @dataclass(frozen=True)
 class ComponentCheckResult(GraphCheckComponent):
-    checks: list[ValueCheckResult] | list[GraphCheckResult] = field(default_factory=list)
+    checks: list[BaseCheck] | list[GraphCheckResult] = field(default_factory=list)

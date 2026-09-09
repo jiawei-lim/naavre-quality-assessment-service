@@ -1,13 +1,12 @@
-from dataclasses import asdict
-from typing import Any, Callable
-
 import networkx as nx
+from networkx.exception import NetworkXUnfeasible
 
+from ..fair.fair_check_service import FairCheck
 from ...types.result_types import (
     GraphCheckComponent,
     GraphCheckLink,
     GraphCheckResult,
-    ValueCheckResult
+    BaseCheck
 )
 from ...types.quality_dimensions import QualityDimension
 from ...types.workflow_components import WorkflowComponent
@@ -19,9 +18,9 @@ THRESHOLDS = {
     "LONGEST_PATH" : 15
 }
 
-def get_size(graph: nx.MultiDiGraph) -> ValueCheckResult:
+def get_size(graph: nx.MultiDiGraph) -> BaseCheck:
     size = len(graph.nodes)
-    return ValueCheckResult(
+    return BaseCheck(
             check_type = "workflow_size",
             quality_dimension = QualityDimension.MAINTAINABILITY,
             quality_subcharacteristic= "analyzability",
@@ -30,18 +29,19 @@ def get_size(graph: nx.MultiDiGraph) -> ValueCheckResult:
             severity = "passed" if size <= THRESHOLDS["WORKFLOW_SIZE"] else "failed"
         )
 
-def get_longest_path(graph: nx.MultiDiGraph) -> ValueCheckResult:
+def get_longest_path(graph: nx.MultiDiGraph) -> BaseCheck:
     try:
-        return ValueCheckResult(
+        value = nx.dag_longest_path_length(graph)
+        return BaseCheck(
                 check_type = "workflow_longest_path",
                 quality_dimension = QualityDimension.MAINTAINABILITY,
                 quality_subcharacteristic= "analyzability",
                 message = "Longest path of the workflow",
-                value = nx.dag_longest_path_length(graph),
-                severity = "failed" if nx.dag_longest_path_length(graph) >= THRESHOLDS["LONGEST_PATH"] else "passed"
+                value = value,
+                severity = "failed" if value >= THRESHOLDS["LONGEST_PATH"] else "passed"
             )
-    except:
-        return ValueCheckResult(
+    except NetworkXUnfeasible:
+        return BaseCheck(
                 check_type = "workflow_longest_path",
                 quality_dimension = QualityDimension.MAINTAINABILITY,
                 quality_subcharacteristic= "analyzability",
@@ -50,9 +50,9 @@ def get_longest_path(graph: nx.MultiDiGraph) -> ValueCheckResult:
             )
 
 
-def get_cnc(graph: nx.MultiDiGraph) -> ValueCheckResult:
-    cnc  = round(len(graph.nodes) / len(graph.edges),2)
-    return ValueCheckResult(
+def get_cnc(graph: nx.MultiDiGraph) -> BaseCheck:
+    cnc  = round(len(graph.edges) / len(graph.nodes),2)
+    return BaseCheck(
             check_type = "workflow_cnc",
             quality_dimension = QualityDimension.MAINTAINABILITY,
             quality_subcharacteristic= "analyzability",
@@ -265,8 +265,6 @@ def get_invalid_links(graph: nx.MultiDiGraph) -> list[GraphCheckResult]:
     return results
 
 
-
-
 def get_shared_configurations(graph: nx.MultiDiGraph) -> list[GraphCheckResult]:
     """
     Configuration variable coupling check
@@ -302,29 +300,11 @@ def get_shared_configurations(graph: nx.MultiDiGraph) -> list[GraphCheckResult]:
     ]
 
 
-def serialize_graph_check_results(
-    results: list[GraphCheckResult],
-) -> list[dict]:
-    return [asdict(result) for result in results]
+def run_fair_checks(graph: nx.MultiDiGraph) -> list[BaseCheck]:
+    # Constructing FairCheck is what queries the metadata catalogue, so this is
+    # only reached when the FAIR dimension was actually requested.
+    return FairCheck(graph.graph["file_name"]).run_checks()
 
-
-# The graph checks belonging to each quality dimension. Every check takes the
-# graph and returns either a single result or a list of them.
-GRAPH_CHECKS: dict[QualityDimension, list[Callable[[nx.MultiDiGraph], Any]]] = {
-    QualityDimension.FUNCTIONAL_SUITABILITY: [
-        get_cycles,
-        get_input_output_type_mismatches,
-        get_unfulfilled_inputs,
-        get_invalid_links,
-        get_specification_completeness,
-    ],
-    QualityDimension.MAINTAINABILITY: [
-        get_shared_configurations,
-        get_size,
-        get_longest_path,
-        get_cnc,
-    ],
-}
 
 ##################################
 #        HELPER METHODS          #
@@ -353,11 +333,6 @@ def _component_ref(
 
 def _incomplete_specifications(component: WorkflowComponent) -> list[str]:
     base_image = component.base_container_image
-    untyped_ports = [
-        port.name
-        for port in [*component.inputs, *component.outputs]
-        if not port.type
-    ]
 
     return [
         issue
@@ -366,7 +341,6 @@ def _incomplete_specifications(component: WorkflowComponent) -> list[str]:
             ("has no base container image build", not getattr(base_image, "build", None)),
             ("has no base container image runtime", not getattr(base_image, "runtime", None)),
             ("has no kernel", not component.kernel),
-            (f"has untyped ports: {', '.join(untyped_ports)}", untyped_ports),
             ("is still a draft", component.is_draft),
         ]
         if incomplete
