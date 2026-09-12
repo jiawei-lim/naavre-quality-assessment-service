@@ -46,7 +46,7 @@ def get_longest_path(graph: nx.MultiDiGraph) -> BaseCheck:
                 quality_dimension = QualityDimension.MAINTAINABILITY,
                 quality_subcharacteristic= "analyzability",
                 message = "Longest path of the workflow can not be assessed due to cycle",
-                severity = "failed"
+                severity = "warning"
             )
 
 
@@ -103,7 +103,7 @@ def get_cycles(graph: nx.MultiDiGraph) -> list[GraphCheckResult]:
     """
     result = [
         GraphCheckResult(
-            check_type="cycle",
+            check_type="graph_acyclicity",
             quality_dimension=QualityDimension.FUNCTIONAL_SUITABILITY,
             quality_subcharacteristic="Correctness",
             severity="failed",
@@ -117,7 +117,7 @@ def get_cycles(graph: nx.MultiDiGraph) -> list[GraphCheckResult]:
     if result == []:
         result = [
             GraphCheckResult(
-            check_type="cycle",
+            check_type="graph_acyclicity",
             quality_dimension=QualityDimension.FUNCTIONAL_SUITABILITY,
             quality_subcharacteristic="Correctness",
             severity="passed",
@@ -142,6 +142,8 @@ def get_input_output_type_mismatches(
         to_port_name = edge_data.get("to_port_name")
         from_type = _declared_port_type(graph, from_node, "outputs", from_port_name)
         to_type = _declared_port_type(graph, to_node, "inputs", to_port_name)
+        from_label = _node_label(graph, from_node)
+        to_label = _node_label(graph, to_node)
 
         if not from_type or not to_type or from_type == to_type:
             continue
@@ -151,10 +153,10 @@ def get_input_output_type_mismatches(
                 check_type="input_output_type_mismatch",
                 quality_dimension=QualityDimension.FUNCTIONAL_SUITABILITY,
                 quality_subcharacteristic="Correctness",
-                severity="warning",
+                severity="failed",
                 message=(
-                    f"Link from '{from_node}.{from_port_name}' ({from_type}) "
-                    f"to '{to_node}.{to_port_name}' ({to_type}) has mismatched "
+                    f"Link from '{from_label}.{from_port_name}' ({from_type}) "
+                    f"to '{to_label}.{to_port_name}' ({to_type}) has mismatched "
                     "input/output types."
                 ),
                 components=[
@@ -231,7 +233,7 @@ def get_unfulfilled_inputs(graph: nx.MultiDiGraph) -> list[GraphCheckResult]:
                 quality_dimension=QualityDimension.FUNCTIONAL_SUITABILITY,
                 quality_subcharacteristic="Correctness",
                 severity="passed",
-                message="All required inputs are fulfilled",
+                message="All inputs are fulfilled",
                 components=[],
                 links=[],
             )
@@ -331,6 +333,22 @@ def _component_ref(
     )
 
 
+def _node_label(graph: nx.MultiDiGraph, node_id: str) -> str:
+    """
+    Human-readable name for a node, falling back to its id
+    """
+    if node_id not in graph:
+        return node_id
+
+    node_data = graph.nodes[node_id]
+
+    return (
+        node_data.get("title")
+        or getattr(node_data.get("component"), "title", None)
+        or node_id
+    )
+
+
 def _incomplete_specifications(component: WorkflowComponent) -> list[str]:
     base_image = component.base_container_image
 
@@ -425,6 +443,8 @@ def _get_duplicate_links(graph: nx.MultiDiGraph) -> list[GraphCheckResult]:
             continue
 
         from_node, from_port_name, to_node, to_port_name = endpoint_key
+        from_label = _node_label(graph, from_node)
+        to_label = _node_label(graph, to_node)
         results.append(
             GraphCheckResult(
                 check_type="invalid_link",
@@ -432,9 +452,9 @@ def _get_duplicate_links(graph: nx.MultiDiGraph) -> list[GraphCheckResult]:
                 quality_subcharacteristic="Correctness",
                 severity="failed",
                 message=(
-                    "Workflow contains duplicate links from "
-                    f"'{from_node}.{from_port_name}' to "
-                    f"'{to_node}.{to_port_name}'."
+                    "Duplicate links from "
+                    f"'{from_label}.{from_port_name}' to "
+                    f"'{to_label}.{to_port_name}'."
                 ),
                 components=[
                     _component_ref(graph, from_node),
@@ -470,10 +490,10 @@ def _get_same_direction_port_links(
                 quality_subcharacteristic="Correctness",
                 severity="failed",
                 message=(
-                    "Workflow contains an invalid "
+                    "Invalid "
                     f"{from_direction}-to-{to_direction} link from "
-                    f"'{from_node}.{from_port_name}' to "
-                    f"'{to_node}.{to_port_name}'."
+                    f"'{_node_label(graph, from_node)}.{from_port_name}' to "
+                    f"'{_node_label(graph, to_node)}.{to_port_name}'."
                 ),
                 components=[
                     _component_ref(graph, from_node),
