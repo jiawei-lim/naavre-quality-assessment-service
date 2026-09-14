@@ -1,13 +1,29 @@
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema
 from rest_framework import generics
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from .adapters import WorkflowFileAdapter
 from .models import *
+from .quality_model import TOOLTIPS
 from .serializers import *
 from .services.workflow_file import workflow_graph_builder
 from .services import metrics_service
+from .types.check_types import CheckType
 from .types.quality_dimensions import QualityDimension
+
+
+class QualityModelView(APIView):
+    @extend_schema(responses=OpenApiTypes.OBJECT)
+    def get(self, request, *args, **kwargs):
+        return Response(
+            {
+                check_type.value: TOOLTIPS.get(check_type, "")
+                for check_type in CheckType
+            }
+        )
 
 
 class AssessmentReportListView(generics.ListAPIView):

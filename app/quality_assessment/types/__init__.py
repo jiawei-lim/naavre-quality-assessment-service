@@ -18,8 +18,10 @@ from quality_assessment.types.result_types import (
     GraphCheckResult,
 )
 from quality_assessment.types.quality_dimensions import QualityDimension
+from quality_assessment.types.check_types import CheckType
 
 __all__ = [
+    "CheckType",
     "BaseContainerImage",
     "Configuration",
     "Dependency",

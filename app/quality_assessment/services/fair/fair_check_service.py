@@ -1,6 +1,7 @@
 from .metadata_catalogue_client import *
 from ...types.result_types import *
 from ...types.quality_dimensions import QualityDimension
+from ...types.check_types import CheckType
 from dataclasses import dataclass
 from owslib.csw import CatalogueServiceWeb
 import functools
@@ -12,7 +13,7 @@ import lxml.etree as etree
 
 @dataclass(frozen=True)
 class FairCheckMeta:
-    check_type: str
+    check_type: CheckType
     quality_subcharacteristic: str
     message: str
 
@@ -27,7 +28,7 @@ class FairCheckMeta:
         )
 
 
-def fair_check(check_type: str, quality_subcharacteristic: str, message: str):
+def fair_check(check_type: CheckType, quality_subcharacteristic: str, message: str):
     def decorator(fn):
         meta = FairCheckMeta(check_type, quality_subcharacteristic, message)
 
@@ -73,17 +74,17 @@ class FairCheck:
             if hasattr(attr, "_fair_meta")
         ]
 
-    @fair_check("f4_registered", "Findability", "Registered or indexed in a searchable FAIR resource")
+    @fair_check(CheckType.F4_REGISTERED, "Findability", "Registered or indexed in a searchable FAIR resource")
     def check_registered(self, meta) -> BaseCheck:
         return meta.result("passed")
 
-    @fair_check("f1_persistent", "Findability", "Has persistent identifier (PID)")
+    @fair_check(CheckType.F1_PERSISTENT, "Findability", "Has persistent identifier (PID)")
     def check_persistent_identifier(self, meta) -> BaseCheck:
         ids = self._field_values(self.dc_record, "identifier")
         persistent = [i for i in ids if self.PID.match(i)]
         return meta.result("passed" if persistent else "failed")
 
-    @fair_check("a1_persistent", "Accessibility", "Retrivable via identifiers")
+    @fair_check(CheckType.A1_PERSISTENT, "Accessibility", "Retrivable via identifiers")
     def check_retrievable(self, meta) -> BaseCheck:
         root = etree.fromstring(self.iso_xml.encode())
 
@@ -94,9 +95,9 @@ class FairCheck:
         result = map(self._resolves,links)
         return meta.result("passed" if all(result) else "failed")
 
-    @fair_check("f2_rich", "Findability", "Has rich metadata")
+    @fair_check(CheckType.F2_RICH, "Findability", "Has rich metadata")
     def check_rich_metadata(self, meta) -> BaseCheck:
-        RICH_FIELDS = ["title", "abstract", "subjects", "creator", "publisher","date", "type", "language", "rights", "relation"]
+        RICH_FIELDS = ["title", "creator", "subjects", "description", "publisher", "contributor" , "date", "type", "format" ,"source", "language", "coverage" , "relation" ,  "rights", "identifier"]
         result = [f for f in RICH_FIELDS if self._field_values(self.dc_record, f)]
 
         return meta.result(
@@ -104,7 +105,7 @@ class FairCheck:
             value = f"{len(result)} out of {len(RICH_FIELDS)} required fields specified"
         )
 
-    @fair_check("r1.1_license", "Reusability", "Has a clear and accessible license")
+    @fair_check(CheckType.R1_1_LICENSE, "Reusability", "Has a clear and accessible license")
     def check_license(self, meta) -> BaseCheck:
         license_id = self._match_license(self._use_limitations(self.iso_xml))
         if license_id:
@@ -112,7 +113,7 @@ class FairCheck:
         else:
             return meta.result("failed")
 
-    @fair_check("r1.1_component_license", "Reusability", "All workflow components have a clear and accessible license")
+    @fair_check(CheckType.R1_1_COMPONENT_LICENSE, "Reusability", "All workflow components have a clear and accessible license")
     def check_component_license(self, meta) -> BaseCheck:
         services = self._extract_component_services()
         results = []
@@ -184,10 +185,9 @@ class FairCheck:
 
     def _field_values(self,rec, name):
         """Read a CswRecord field as a list (some are scalars, some are lists)."""
-        val = getattr(rec, name, None)
-        if not val:
-            return []
-        return [self._clean(v) for v in val] if isinstance(val, list) else [self._clean(val)]
+        xml = rec.xml if isinstance(rec.xml, bytes) else rec.xml.encode()
+        nodes = etree.fromstring(xml).xpath("//*[local-name()=$n]", n=name)
+        return [v for v in (self._clean("".join(n.itertext())) for n in nodes) if v]
 
     def _clean(self,text):
         return re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", html.unescape(text or ""))).strip()

@@ -6,6 +6,7 @@ from typing import Any
 from ..code.code_check_service import ComponentSource, fetch_source, get_external_urls
 from ...types.result_types import BaseCheck
 from ...types.quality_dimensions import QualityDimension
+from ...types.check_types import CheckType
 from ...adapters.workflow_components import WorkflowComponent
 
 THRESHOLDS = {
@@ -30,7 +31,7 @@ class ComponentContext:
 def get_fan_in(graph:nx.MultiDiGraph, node_id:str) -> BaseCheck:
     fan_in = len(set(graph.predecessors(node_id)))
     return BaseCheck(
-            check_type = "fan_in",
+            check_type = CheckType.FAN_IN,
             quality_dimension = QualityDimension.MAINTAINABILITY,
             quality_subcharacteristic= "modularity",
             message = "The number of distinct components that the component takes input from",
@@ -41,7 +42,7 @@ def get_fan_in(graph:nx.MultiDiGraph, node_id:str) -> BaseCheck:
 def get_fan_out(graph:nx.MultiDiGraph, node_id:str) -> BaseCheck:
     fan_out = len(set(graph.successors(node_id)))
     return BaseCheck(
-            check_type = "fan_out",
+            check_type = CheckType.FAN_OUT,
             quality_dimension = QualityDimension.MAINTAINABILITY,
             quality_subcharacteristic= "modularity",
             message = "The number of links that have the component as a source",
@@ -53,7 +54,7 @@ def get_hardcoded_configurations(node:dict[str,Any]) -> BaseCheck:
     component = node.get("component")
     confs = component.configurations
     return BaseCheck(
-            check_type = "hardcoded_configurations",
+            check_type = CheckType.HARDCODED_CONFIGURATIONS,
             quality_dimension = QualityDimension.MAINTAINABILITY,
             quality_subcharacteristic= "reusability",
             message = "The number of unchangeable containerized configurations",
@@ -65,7 +66,7 @@ def get_interface_size(node:dict[str,Any]) -> BaseCheck:
     inputs = len(component.inputs)
     parameters = len(component.parameters)
     return BaseCheck(
-        check_type = "interface_size",
+        check_type = CheckType.INTERFACE_SIZE,
         quality_dimension = QualityDimension.MAINTAINABILITY,
         quality_subcharacteristic= "modularity",
         message = "Interface size of the component",
@@ -80,7 +81,7 @@ def get_default_value_completeness(node:dict[str,Any]) -> BaseCheck:
         parameters_no_default = [param for param in parameters if not param.default_value]
         if len(parameters_no_default) > 0:
             return BaseCheck(
-                check_type = "default_value_completeness",
+                check_type = CheckType.DEFAULT_VALUE_COMPLETENESS,
                 quality_dimension = QualityDimension.SUSTAINABILITY,
                 quality_subcharacteristic= None,
                 message = "Parameters should have default values",
@@ -89,7 +90,7 @@ def get_default_value_completeness(node:dict[str,Any]) -> BaseCheck:
             )
 
     return BaseCheck(
-            check_type = "default_value_completeness",
+            check_type = CheckType.DEFAULT_VALUE_COMPLETENESS,
             quality_dimension = QualityDimension.SUSTAINABILITY,
             quality_subcharacteristic= None,
             message = "Parameters should have default values",
@@ -112,17 +113,17 @@ def get_external_service_dependency(
 
     if unavailable:
         return BaseCheck(
-            check_type = "external_service_dependency",
+            check_type = CheckType.EXTERNAL_SERVICE_DEPENDENCY,
             quality_dimension = QualityDimension.SUSTAINABILITY,
             quality_subcharacteristic= None,
             message = "External service dependencies could not be determined",
             value = unavailable,
-            severity = "warning"
+            severity = ""
         )
 
     if len(secrets) > 0 or len(external_urls) > 0:
         return BaseCheck(
-            check_type = "external_service_dependency",
+            check_type = CheckType.EXTERNAL_SERVICE_DEPENDENCY,
             quality_dimension = QualityDimension.SUSTAINABILITY,
             quality_subcharacteristic= None,
             message = "Calls to external services increases exposure to decay",
@@ -131,7 +132,7 @@ def get_external_service_dependency(
         )
 
     return BaseCheck(
-            check_type = "external_service_dependency",
+            check_type = CheckType.EXTERNAL_SERVICE_DEPENDENCY,
             quality_dimension = QualityDimension.SUSTAINABILITY,
             quality_subcharacteristic= None,
             message = "No calls to external services detected",
