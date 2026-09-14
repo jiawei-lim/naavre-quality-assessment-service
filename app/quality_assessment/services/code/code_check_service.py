@@ -7,6 +7,7 @@ import re
 import textwrap
 from ...types.result_types import BaseCheck
 from ...types.quality_dimensions import QualityDimension
+from ...types.check_types import CheckType
 from typing import Any, Callable
 from ...adapters.workflow_components import WorkflowComponent
 
@@ -37,7 +38,7 @@ def fetch_source(source_url: str | None) -> ComponentSource:
 @dataclass(frozen=True)
 class CodeCheckMeta:
     """Identity of a code check, so a degraded result cannot drift from the real one."""
-    check_type: str
+    check_type: CheckType
     quality_dimension: QualityDimension
     message: str
     quality_subcharacteristic: str | None = None
@@ -53,18 +54,18 @@ class CodeCheckMeta:
         )
 
     def unavailable(self, reason: str) -> BaseCheck:
-        return self.result("warning", reason)
+        return self.result("", reason)
 
 
 LOC = CodeCheckMeta(
-    check_type = "loc",
+    check_type = CheckType.LOC,
     quality_dimension = QualityDimension.MAINTAINABILITY,
     quality_subcharacteristic = "analyzability",
     message = "The count of source code lines of the component",
 )
 
 CC = CodeCheckMeta(
-    check_type = "cyclomatic_complexity",
+    check_type = CheckType.CYCLOMATIC_COMPLEXITY,
     quality_dimension = QualityDimension.MAINTAINABILITY,
     quality_subcharacteristic = "analyzability",
     message = "The cyclomatic complexity of the source code of the component",

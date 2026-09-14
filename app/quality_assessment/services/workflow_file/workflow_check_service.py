@@ -9,6 +9,7 @@ from ...types.result_types import (
     BaseCheck
 )
 from ...types.quality_dimensions import QualityDimension
+from ...types.check_types import CheckType
 from ...types.workflow_components import WorkflowComponent
 
 
@@ -21,7 +22,7 @@ THRESHOLDS = {
 def get_size(graph: nx.MultiDiGraph) -> BaseCheck:
     size = len(graph.nodes)
     return BaseCheck(
-            check_type = "workflow_size",
+            check_type = CheckType.WORKFLOW_SIZE,
             quality_dimension = QualityDimension.MAINTAINABILITY,
             quality_subcharacteristic= "analyzability",
             message = "Size of the workflow (number of nodes)",
@@ -33,7 +34,7 @@ def get_longest_path(graph: nx.MultiDiGraph) -> BaseCheck:
     try:
         value = nx.dag_longest_path_length(graph)
         return BaseCheck(
-                check_type = "workflow_longest_path",
+                check_type = CheckType.WORKFLOW_LONGEST_PATH,
                 quality_dimension = QualityDimension.MAINTAINABILITY,
                 quality_subcharacteristic= "analyzability",
                 message = "Longest path of the workflow",
@@ -42,7 +43,7 @@ def get_longest_path(graph: nx.MultiDiGraph) -> BaseCheck:
             )
     except NetworkXUnfeasible:
         return BaseCheck(
-                check_type = "workflow_longest_path",
+                check_type = CheckType.WORKFLOW_LONGEST_PATH,
                 quality_dimension = QualityDimension.MAINTAINABILITY,
                 quality_subcharacteristic= "analyzability",
                 message = "Longest path of the workflow can not be assessed due to cycle",
@@ -53,7 +54,7 @@ def get_longest_path(graph: nx.MultiDiGraph) -> BaseCheck:
 def get_cnc(graph: nx.MultiDiGraph) -> BaseCheck:
     cnc  = round(len(graph.edges) / len(graph.nodes),2)
     return BaseCheck(
-            check_type = "workflow_cnc",
+            check_type = CheckType.WORKFLOW_CNC,
             quality_dimension = QualityDimension.MAINTAINABILITY,
             quality_subcharacteristic= "analyzability",
             message = "Ration of components in workflow to number of edges",
@@ -71,7 +72,7 @@ def get_specification_completeness(graph: nx.MultiDiGraph) -> list[GraphCheckRes
 
         results.extend(
             GraphCheckResult(
-                check_type="specification_completeness",
+                check_type=CheckType.SPECIFICATION_COMPLETENESS,
                 quality_dimension=QualityDimension.FUNCTIONAL_SUITABILITY,
                 quality_subcharacteristic="Completeness",
                 severity="failed",
@@ -85,7 +86,7 @@ def get_specification_completeness(graph: nx.MultiDiGraph) -> list[GraphCheckRes
     if results == []:
         results.append(
             GraphCheckResult(
-                check_type="specification_completeness",
+                check_type=CheckType.SPECIFICATION_COMPLETENESS,
                 quality_dimension=QualityDimension.FUNCTIONAL_SUITABILITY,
                 quality_subcharacteristic="Completeness",
                 severity="passed",
@@ -103,7 +104,7 @@ def get_cycles(graph: nx.MultiDiGraph) -> list[GraphCheckResult]:
     """
     result = [
         GraphCheckResult(
-            check_type="graph_acyclicity",
+            check_type=CheckType.GRAPH_ACYCLICITY,
             quality_dimension=QualityDimension.FUNCTIONAL_SUITABILITY,
             quality_subcharacteristic="Correctness",
             severity="failed",
@@ -117,7 +118,7 @@ def get_cycles(graph: nx.MultiDiGraph) -> list[GraphCheckResult]:
     if result == []:
         result = [
             GraphCheckResult(
-            check_type="graph_acyclicity",
+            check_type=CheckType.GRAPH_ACYCLICITY,
             quality_dimension=QualityDimension.FUNCTIONAL_SUITABILITY,
             quality_subcharacteristic="Correctness",
             severity="passed",
@@ -150,7 +151,7 @@ def get_input_output_type_mismatches(
 
         results.append(
             GraphCheckResult(
-                check_type="input_output_type_mismatch",
+                check_type=CheckType.INPUT_OUTPUT_TYPE_MISMATCH,
                 quality_dimension=QualityDimension.FUNCTIONAL_SUITABILITY,
                 quality_subcharacteristic="Correctness",
                 severity="failed",
@@ -170,7 +171,7 @@ def get_input_output_type_mismatches(
         if results == []:
             results.append(
                 GraphCheckResult(
-                check_type="input_output_type_mismatch",
+                check_type=CheckType.INPUT_OUTPUT_TYPE_MISMATCH,
                 quality_dimension=QualityDimension.FUNCTIONAL_SUITABILITY,
                 quality_subcharacteristic="Correctness",
                 severity="passed",
@@ -213,7 +214,7 @@ def get_unfulfilled_inputs(graph: nx.MultiDiGraph) -> list[GraphCheckResult]:
 
             results.append(
                 GraphCheckResult(
-                    check_type="unfulfilled_input",
+                    check_type=CheckType.UNFULFILLED_INPUT,
                     quality_dimension=QualityDimension.FUNCTIONAL_SUITABILITY,
                     quality_subcharacteristic="Correctness",
                     severity="failed",
@@ -229,7 +230,7 @@ def get_unfulfilled_inputs(graph: nx.MultiDiGraph) -> list[GraphCheckResult]:
     if results == []:
         results.append(
             GraphCheckResult(
-                check_type="unfulfilled_input",
+                check_type=CheckType.UNFULFILLED_INPUT,
                 quality_dimension=QualityDimension.FUNCTIONAL_SUITABILITY,
                 quality_subcharacteristic="Correctness",
                 severity="passed",
@@ -254,7 +255,7 @@ def get_invalid_links(graph: nx.MultiDiGraph) -> list[GraphCheckResult]:
     if results == []:
         results.append(
         GraphCheckResult(
-            check_type="invalid_link",
+            check_type=CheckType.INVALID_LINK,
             quality_dimension=QualityDimension.FUNCTIONAL_SUITABILITY,
             quality_subcharacteristic="Correctness",
             severity="passed",
@@ -286,7 +287,7 @@ def get_shared_configurations(graph: nx.MultiDiGraph) -> list[GraphCheckResult]:
 
     return [
         GraphCheckResult(
-            check_type="shared_configuration",
+            check_type=CheckType.SHARED_CONFIGURATION,
             quality_dimension=QualityDimension.MAINTAINABILITY,
             quality_subcharacteristic="Reusability",
             message=(
@@ -447,7 +448,7 @@ def _get_duplicate_links(graph: nx.MultiDiGraph) -> list[GraphCheckResult]:
         to_label = _node_label(graph, to_node)
         results.append(
             GraphCheckResult(
-                check_type="invalid_link",
+                check_type=CheckType.INVALID_LINK,
                 quality_dimension=QualityDimension.FUNCTIONAL_SUITABILITY,
                 quality_subcharacteristic="Correctness",
                 severity="failed",
@@ -485,7 +486,7 @@ def _get_same_direction_port_links(
 
         results.append(
             GraphCheckResult(
-                check_type="invalid_link",
+                check_type=CheckType.INVALID_LINK,
                 quality_dimension=QualityDimension.FUNCTIONAL_SUITABILITY,
                 quality_subcharacteristic="Correctness",
                 severity="failed",
