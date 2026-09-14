@@ -24,7 +24,6 @@ GRAPH_CHECKS: dict[QualityDimension, list[GraphCheck]] = {
         workflow.get_shared_configurations,
         workflow.get_size,
         workflow.get_longest_path,
-        workflow.get_cnc,
     ],
     QualityDimension.FAIR: [
         workflow.run_fair_checks,
