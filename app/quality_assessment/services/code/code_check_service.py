@@ -8,7 +8,7 @@ import textwrap
 from ...types.result_types import BaseCheck
 from ...types.quality_dimensions import QualityDimension
 from ...types.check_types import CheckType
-from typing import Any, Callable
+from typing import Any
 from ...adapters.workflow_components import WorkflowComponent
 
 
@@ -17,7 +17,6 @@ THRESHOLDS = {
     "LOC" : 60,
     "CC" : 25,
 }
-
 
 @dataclass(frozen=True)
 class ComponentSource:
@@ -28,55 +27,69 @@ class ComponentSource:
 def fetch_source(source_url: str | None) -> ComponentSource:
     if not source_url:
         return ComponentSource()
-
     try:
         return ComponentSource(code = get_raw_file(source_url + "/task.py"))
     except Exception:
         return ComponentSource(error = "Source code could not be retrieved")
 
 
-@dataclass(frozen=True)
-class CodeCheckMeta:
-    """Identity of a code check, so a degraded result cannot drift from the real one."""
-    check_type: CheckType
-    quality_dimension: QualityDimension
-    message: str
-    quality_subcharacteristic: str | None = None
-
-    def result(self, severity: str, value = None) -> BaseCheck:
+def get_loc(node:dict[str,Any], source:ComponentSource) -> BaseCheck | None:
+    if source.error:
         return BaseCheck(
-            check_type = self.check_type,
-            quality_dimension = self.quality_dimension,
-            quality_subcharacteristic = self.quality_subcharacteristic,
-            message = self.message,
-            severity = severity,
-            value = value
+            check_type = CheckType.LOC,
+            quality_dimension = QualityDimension.MAINTAINABILITY,
+            quality_subcharacteristic = "analyzability",
+            message = "The count of source code lines of the component",
+            severity = "",
+            value = source.error,
         )
 
-    def unavailable(self, reason: str) -> BaseCheck:
-        return self.result("", reason)
+    if source.code is None:
+        return None
 
+    loc = raw.analyze(source.code).sloc
 
-LOC = CodeCheckMeta(
-    check_type = CheckType.LOC,
-    quality_dimension = QualityDimension.MAINTAINABILITY,
-    quality_subcharacteristic = "analyzability",
-    message = "The count of source code lines of the component",
-)
+    component: WorkflowComponent = node.get("component")
+    template_code_length = 8 + len(component.inputs) + len(component.parameters) + len(component.configurations) + (3 * len(component.outputs))
+    loc -= template_code_length
 
-CC = CodeCheckMeta(
-    check_type = CheckType.CYCLOMATIC_COMPLEXITY,
-    quality_dimension = QualityDimension.MAINTAINABILITY,
-    quality_subcharacteristic = "analyzability",
-    message = "The cyclomatic complexity of the source code of the component",
-)
+    if loc <= 0:
+        raise Exception("Negative or Zero LoC calculated")
 
-
-def get_loc(node:dict[str,Any], source:ComponentSource) -> BaseCheck | None:
-    return _from_source(LOC, source, lambda code: _loc(node, code))
+    return BaseCheck(
+        check_type = CheckType.LOC,
+        quality_dimension = QualityDimension.MAINTAINABILITY,
+        quality_subcharacteristic = "analyzability",
+        message = "The count of source code lines of the component",
+        severity = "failed" if loc > THRESHOLDS["LOC"] else "passed",
+        value = loc,
+    )
 
 def get_cc(source:ComponentSource) -> BaseCheck | None:
-    return _from_source(CC, source, _cc)
+    if source.error:
+        return BaseCheck(
+            check_type = CheckType.CYCLOMATIC_COMPLEXITY,
+            quality_dimension = QualityDimension.MAINTAINABILITY,
+            quality_subcharacteristic = "analyzability",
+            message = "The cyclomatic complexity of the source code of the component",
+            severity = "",
+            value = source.error,
+        )
+
+    if source.code is None:
+        return None
+
+    wrapped_code = _wrap_code(source.code)
+    cc = complexity.cc_visit(wrapped_code)[0].complexity
+
+    return BaseCheck(
+        check_type = CheckType.CYCLOMATIC_COMPLEXITY,
+        quality_dimension = QualityDimension.MAINTAINABILITY,
+        quality_subcharacteristic = "analyzability",
+        message = "The cyclomatic complexity of the source code of the component",
+        severity = "failed" if cc > THRESHOLDS["CC"] else "passed",
+        value = cc,
+    )
 
 def get_comment_density(code:str) -> BaseCheck:
     raw_analysis = raw.analyze(code)
@@ -110,50 +123,6 @@ def get_external_urls(code:str) -> list[str]:
 ##################################
 #        HELPER METHODS          #
 ##################################
-
-def _loc(node:dict[str,Any], code:str) -> BaseCheck:
-    loc = raw.analyze(code).sloc
-
-    component: WorkflowComponent = node.get("component")
-    template_code_length = 8 + len(component.inputs) + len(component.parameters) + len(component.configurations) + (3 * len(component.outputs))
-    loc -= template_code_length
-
-    if loc <= 0:
-        raise Exception("Negative or Zero LoC calculated")
-
-    return LOC.result(
-        "failed" if loc > THRESHOLDS["LOC"] else "passed",
-        value = loc
-    )
-
-def _cc(code:str) -> BaseCheck:
-    wrapped_code = _wrap_code(code)
-    cc = complexity.cc_visit(wrapped_code)[0].complexity
-
-    return CC.result(
-        "failed" if cc > THRESHOLDS["CC"] else "passed",
-        value = cc
-    )
-
-def _from_source(
-    meta:CodeCheckMeta,
-    source:ComponentSource,
-    check:Callable[[str], BaseCheck],
-) -> BaseCheck | None:
-    if source.error:
-        return meta.unavailable(source.error)
-
-    if source.code is None:
-        return None
-
-    return _safe(meta, lambda: check(source.code))
-
-def _safe(meta:CodeCheckMeta, check:Callable[[], BaseCheck]) -> BaseCheck:
-    """Run a check, degrading it to a warning when the source cannot be analyzed."""
-    try:
-        return check()
-    except Exception as error:
-        return meta.unavailable(f"{meta.check_type} could not be computed: {error}")
 
 def _wrap_code(code:str) -> str:
     return f"def generic():\n{textwrap.indent(code, '    ')}"

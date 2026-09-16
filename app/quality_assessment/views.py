@@ -88,6 +88,5 @@ class AssessmentRunView(generics.GenericAPIView):
             raise ValidationError({"asset_data": "Expected an object."})
 
         payload = dict(asset_data)
-        payload["id"] = payload.get("id") or validated_data.get("asset_id", "")
         payload["fileName"] = validated_data.get("fileName", "")
         return payload

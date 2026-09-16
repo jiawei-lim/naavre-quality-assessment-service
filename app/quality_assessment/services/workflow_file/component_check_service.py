@@ -17,14 +17,12 @@ THRESHOLDS = {
 
 @dataclass
 class ComponentContext:
-    """Everything a component check may need, so they share one call signature."""
     graph: nx.MultiDiGraph
     node_id: str
     node_data: dict[str, Any]
 
     @cached_property
     def source(self) -> ComponentSource:
-        """Fetched at most once per component, and only if a check asks for it."""
         return fetch_source(self.node_data.get("source_url"))
 
 

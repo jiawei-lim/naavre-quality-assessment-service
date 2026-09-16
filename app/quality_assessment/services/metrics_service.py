@@ -32,16 +32,16 @@ GRAPH_CHECKS: dict[QualityDimension, list[GraphCheck]] = {
 
 COMPONENT_CHECKS: dict[QualityDimension, list[ComponentCheck]] = {
     QualityDimension.MAINTAINABILITY: [
-        lambda ctx: code.get_loc(ctx.node_data, ctx.source),
-        lambda ctx: code.get_cc(ctx.source),
-        lambda ctx: component.get_hardcoded_configurations(ctx.node_data),
-        lambda ctx: component.get_fan_in(ctx.graph, ctx.node_id),
-        lambda ctx: component.get_fan_out(ctx.graph, ctx.node_id),
-        lambda ctx: component.get_interface_size(ctx.node_data),
+        lambda componentContext: code.get_loc(componentContext.node_data, componentContext.source),
+        lambda componentContext: code.get_cc(componentContext.source),
+        lambda componentContext: component.get_hardcoded_configurations(componentContext.node_data),
+        lambda componentContext: component.get_fan_in(componentContext.graph, componentContext.node_id),
+        lambda componentContext: component.get_fan_out(componentContext.graph, componentContext.node_id),
+        lambda componentContext: component.get_interface_size(componentContext.node_data),
     ],
     QualityDimension.SUSTAINABILITY: [
-        lambda ctx: component.get_default_value_completeness(ctx.node_data),
-        lambda ctx: component.get_external_service_dependency(ctx.node_data, ctx.source),
+        lambda componentContext: component.get_default_value_completeness(componentContext.node_data),
+        lambda componentContext: component.get_external_service_dependency(componentContext.node_data, componentContext.source),
     ],
 }
 
@@ -62,7 +62,6 @@ def _selected(
     registry: dict[QualityDimension, list],
     dimensions: Collection[QualityDimension],
 ) -> list:
-    """The requested dimensions' checks, in quality dimension declaration order."""
     return [
         check
         for dimension in QualityDimension

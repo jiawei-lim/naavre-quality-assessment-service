@@ -2,45 +2,11 @@ from .metadata_catalogue_client import *
 from ...types.result_types import *
 from ...types.quality_dimensions import QualityDimension
 from ...types.check_types import CheckType
-from dataclasses import dataclass
 from owslib.csw import CatalogueServiceWeb
-import functools
 import re
 import html
 import spdx_license_list as spdx
 import lxml.etree as etree
-
-
-@dataclass(frozen=True)
-class FairCheckMeta:
-    check_type: CheckType
-    quality_subcharacteristic: str
-    message: str
-
-    def result(self, severity: str, value=None) -> BaseCheck:
-        return BaseCheck(
-            check_type = self.check_type,
-            quality_dimension = QualityDimension.FAIR,
-            quality_subcharacteristic = self.quality_subcharacteristic,
-            message = self.message,
-            severity = severity,
-            value = value
-        )
-
-
-def fair_check(check_type: CheckType, quality_subcharacteristic: str, message: str):
-    def decorator(fn):
-        meta = FairCheckMeta(check_type, quality_subcharacteristic, message)
-
-        @functools.wraps(fn)
-        def wrapper(self) -> BaseCheck:
-            if not self._valid_record_exists():
-                return meta.result("failed", value = self._unavailable_reason)
-            return fn(self, meta)
-
-        wrapper._fair_meta = meta
-        return wrapper
-    return decorator
 
 
 class FairCheck:
@@ -69,52 +35,138 @@ class FairCheck:
 
     def run_checks(self) -> list[BaseCheck]:
         return [
-            getattr(self, name)()
-            for name, attr in vars(type(self)).items()
-            if hasattr(attr, "_fair_meta")
+            self.check_registered(),
+            self.check_persistent_identifier(),
+            self.check_retrievable(),
+            self.check_rich_metadata(),
+            self.check_license(),
+            self.check_component_license(),
         ]
 
-    @fair_check(CheckType.F4_REGISTERED, "Findability", "Registered or indexed in a searchable FAIR resource")
-    def check_registered(self, meta) -> BaseCheck:
-        return meta.result("passed")
+    def check_registered(self) -> BaseCheck:
+        if not self._valid_record_exists():
+            return BaseCheck(
+                check_type = CheckType.F4_REGISTERED,
+                quality_dimension = QualityDimension.FAIR,
+                quality_subcharacteristic = "Findability",
+                message = "Registered or indexed in a searchable FAIR resource",
+                severity = "failed",
+                value = self._unavailable_reason,
+            )
 
-    @fair_check(CheckType.F1_PERSISTENT, "Findability", "Has persistent identifier (PID)")
-    def check_persistent_identifier(self, meta) -> BaseCheck:
+        return BaseCheck(
+            check_type = CheckType.F4_REGISTERED,
+            quality_dimension = QualityDimension.FAIR,
+            quality_subcharacteristic = "Findability",
+            message = "Registered or indexed in a searchable FAIR resource",
+            severity = "passed",
+        )
+
+    def check_persistent_identifier(self) -> BaseCheck:
+        if not self._valid_record_exists():
+            return BaseCheck(
+                check_type = CheckType.F1_PERSISTENT,
+                quality_dimension = QualityDimension.FAIR,
+                quality_subcharacteristic = "Findability",
+                message = "Has persistent identifier (PID)",
+                severity = "failed",
+                value = self._unavailable_reason,
+            )
+
         ids = self._field_values(self.dc_record, "identifier")
         persistent = [i for i in ids if self.PID.match(i)]
-        return meta.result("passed" if persistent else "failed")
 
-    @fair_check(CheckType.A1_PERSISTENT, "Accessibility", "Retrivable via identifiers")
-    def check_retrievable(self, meta) -> BaseCheck:
+        return BaseCheck(
+            check_type = CheckType.F1_PERSISTENT,
+            quality_dimension = QualityDimension.FAIR,
+            quality_subcharacteristic = "Findability",
+            message = "Has persistent identifier (PID)",
+            severity = "passed" if persistent else "failed",
+        )
+
+    def check_retrievable(self) -> BaseCheck:
+        if not self._valid_record_exists():
+            return BaseCheck(
+                check_type = CheckType.A1_PERSISTENT,
+                quality_dimension = QualityDimension.FAIR,
+                quality_subcharacteristic = "Accessibility",
+                message = "Retrivable via identifiers",
+                severity = "failed",
+                value = self._unavailable_reason,
+            )
+
         root = etree.fromstring(self.iso_xml.encode())
 
         links = root.xpath("//*[local-name()='linkage']//text() | //*[local-name()='URL']/text()")
         links = [l.strip() for l in links if l.strip().startswith("http")]
         links = [l for l in links if "naavre" in l.lower()]
 
-        result = map(self._resolves,links)
-        return meta.result("passed" if all(result) else "failed")
+        result = map(self._resolves, links)
 
-    @fair_check(CheckType.F2_RICH, "Findability", "Has rich metadata")
-    def check_rich_metadata(self, meta) -> BaseCheck:
+        return BaseCheck(
+            check_type = CheckType.A1_PERSISTENT,
+            quality_dimension = QualityDimension.FAIR,
+            quality_subcharacteristic = "Accessibility",
+            message = "Retrivable via identifiers",
+            severity = "passed" if all(result) else "failed",
+        )
+
+    def check_rich_metadata(self) -> BaseCheck:
+        if not self._valid_record_exists():
+            return BaseCheck(
+                check_type = CheckType.F2_RICH,
+                quality_dimension = QualityDimension.FAIR,
+                quality_subcharacteristic = "Findability",
+                message = "Has rich metadata",
+                severity = "failed",
+                value = self._unavailable_reason,
+            )
+
         RICH_FIELDS = ["title", "creator", "subjects", "description", "publisher", "contributor" , "date", "type", "format" ,"source", "language", "coverage" , "relation" ,  "rights", "identifier"]
         result = [f for f in RICH_FIELDS if self._field_values(self.dc_record, f)]
 
-        return meta.result(
-            "failed" if len(result) != len(RICH_FIELDS) else "passed",
-            value = f"{len(result)} out of {len(RICH_FIELDS)} required fields specified"
+        return BaseCheck(
+            check_type = CheckType.F2_RICH,
+            quality_dimension = QualityDimension.FAIR,
+            quality_subcharacteristic = "Findability",
+            message = "Has rich metadata",
+            severity = "failed" if len(result) != len(RICH_FIELDS) else "passed",
+            value = f"{len(result)} out of {len(RICH_FIELDS)} required fields specified",
         )
 
-    @fair_check(CheckType.R1_1_LICENSE, "Reusability", "Has a clear and accessible license")
-    def check_license(self, meta) -> BaseCheck:
-        license_id = self._match_license(self._use_limitations(self.iso_xml))
-        if license_id:
-            return meta.result("passed", value = license_id)
-        else:
-            return meta.result("failed")
+    def check_license(self) -> BaseCheck:
+        if not self._valid_record_exists():
+            return BaseCheck(
+                check_type = CheckType.R1_1_LICENSE,
+                quality_dimension = QualityDimension.FAIR,
+                quality_subcharacteristic = "Reusability",
+                message = "Has a clear and accessible license",
+                severity = "failed",
+                value = self._unavailable_reason,
+            )
 
-    @fair_check(CheckType.R1_1_COMPONENT_LICENSE, "Reusability", "All workflow components have a clear and accessible license")
-    def check_component_license(self, meta) -> BaseCheck:
+        license_id = self._match_license(self._use_limitations(self.iso_xml))
+
+        return BaseCheck(
+            check_type = CheckType.R1_1_LICENSE,
+            quality_dimension = QualityDimension.FAIR,
+            quality_subcharacteristic = "Reusability",
+            message = "Has a clear and accessible license",
+            severity = "passed" if license_id else "failed",
+            value = license_id,
+        )
+
+    def check_component_license(self) -> BaseCheck:
+        if not self._valid_record_exists():
+            return BaseCheck(
+                check_type = CheckType.R1_1_COMPONENT_LICENSE,
+                quality_dimension = QualityDimension.FAIR,
+                quality_subcharacteristic = "Reusability",
+                message = "All workflow components have a clear and accessible license",
+                severity = "failed",
+                value = self._unavailable_reason,
+            )
+
         services = self._extract_component_services()
         results = []
         for name, uuid in services:
@@ -123,7 +175,15 @@ class FairCheck:
             results.append({"service": name, "uuid": uuid, "license": license_id})
 
         all_licensed = bool(results) and all(r["license"] for r in results)
-        return meta.result("passed" if all_licensed else "failed", value = results)
+
+        return BaseCheck(
+            check_type = CheckType.R1_1_COMPONENT_LICENSE,
+            quality_dimension = QualityDimension.FAIR,
+            quality_subcharacteristic = "Reusability",
+            message = "All workflow components have a clear and accessible license",
+            severity = "passed" if all_licensed else "failed",
+            value = results,
+        )
 
     def _use_limitations(self, xml: str) -> str:
         root = etree.fromstring(xml.encode())
