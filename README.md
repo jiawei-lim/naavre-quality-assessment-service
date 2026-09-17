@@ -5,6 +5,9 @@ The .naavrewf speification file serves as the main asset under assessment, in wh
 
 The quality assessment service sits outside the NaaVRE JupyterLab environment as an independent backend API service.
 
+## Credentials
+This service relies on a Github PAT to pull the source code of NaaVRE workflow components. Copy the `.env.example` and rename it to `.env`. Place the PAT into the `GITHUB_PAT` field.
+
 ## Deployment
 After changes are merged into main, the `Publish container image` pipeline can be triggered manually to publish the image to GHCR.
 
