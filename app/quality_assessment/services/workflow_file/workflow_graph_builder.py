@@ -11,10 +11,7 @@ def build_workflow_multidigraph(
     #Graph level Metadata
     graph.graph.update(
         {
-            "asset_id": workflow_file.id,
             "asset_type": "workflow_file",
-            "title": workflow_file.title,
-            "description": workflow_file.description,
             "file_name": workflow_file.file_name,
             "node_count": len(workflow_file.nodes),
             "link_count": len(workflow_file.links),
