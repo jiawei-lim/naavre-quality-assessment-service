@@ -8,7 +8,8 @@
             "python": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
             "program": "${workspaceFolder}\\app\\manage.py",
             "args": [
-                "runserver"
+                "runserver",
+                "8001"
             ],
             "django": true,
             "justMyCode": true
