@@ -50,7 +50,7 @@ def get_loc(node:dict[str,Any], source:ComponentSource) -> BaseCheck | None:
     loc = raw.analyze(source.code).sloc
 
     component: WorkflowComponent = node.get("component")
-    template_code_length = 8 + len(component.inputs) + len(component.parameters) + len(component.configurations) + (3 * len(component.outputs))
+    template_code_length = 8 + ( 2 * len(component.inputs) ) + ( 2 * len(component.parameters) )+ len(component.configurations) + (3 * len(component.outputs) + len(component.secrets) + len(component.dependencies) )
     loc -= template_code_length
 
     if loc <= 0:
@@ -80,7 +80,7 @@ def get_cc(source:ComponentSource) -> BaseCheck | None:
         return None
 
     wrapped_code = _wrap_code(source.code)
-    cc = complexity.cc_visit(wrapped_code)[0].complexity
+    cc = _total_cc(complexity.cc_visit(wrapped_code)[0])
 
     return BaseCheck(
         check_type = CheckType.CYCLOMATIC_COMPLEXITY,
@@ -126,3 +126,6 @@ def get_external_urls(code:str) -> list[str]:
 
 def _wrap_code(code:str) -> str:
     return f"def generic():\n{textwrap.indent(code, '    ')}"
+
+def _total_cc(block) -> int:
+    return block.complexity + sum(_total_cc(c) for c in getattr(block, "closures", []))
