@@ -100,7 +100,7 @@ def get_external_service_dependency(
     source:ComponentSource,
 ) -> BaseCheck:
     component = node.get("component")
-    secrets = component.secrets
+    secrets = [secret for secret in component.secrets if "minio" not in secret.name.lower()]
 
     external_urls, unavailable = [], source.error
     if source.code is not None:
